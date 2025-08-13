@@ -1,0 +1,105 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: fuelintel-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: fuelintel
+      POSTGRES_USER: fuelintel
+      POSTGRES_PASSWORD: fuelintel_dev_2024
+      TZ: America/Mexico_City
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - fuelintel-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fuelintel"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: fuelintel-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - fuelintel-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ../../
+      dockerfile: infrastructure/docker/Dockerfile.api
+    container_name: fuelintel-api
+    restart: unless-stopped
+    working_dir: /var/www/html
+    environment:
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=fuelintel
+      - DB_USERNAME=fuelintel
+      - DB_PASSWORD=fuelintel_dev_2024
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - APP_ENV=local
+      - APP_DEBUG=true
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../../apps/api:/var/www/html
+      - /var/www/html/vendor
+      - /var/www/html/node_modules
+    networks:
+      - fuelintel-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  scraper:
+    build:
+      context: ../../
+      dockerfile: infrastructure/docker/Dockerfile.scraper
+    container_name: fuelintel-scraper
+    restart: unless-stopped
+    working_dir: /app
+    environment:
+      - DATABASE_URL=postgresql://fuelintel:fuelintel_dev_2024@postgres:5432/fuelintel
+      - API_BASE_URL=http://api:8000
+      - NODE_ENV=development
+      - TZ=America/Mexico_City
+    volumes:
+      - ../../apps/scraper:/app
+      - /app/node_modules
+    networks:
+      - fuelintel-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_started
+
+networks:
+  fuelintel-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
