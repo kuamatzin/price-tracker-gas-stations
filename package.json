@@ -1,0 +1,30 @@
+{
+  "name": "fuelintel",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mexican gas price tracking and prediction platform",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces",
+    "format": "npm run format --workspaces",
+    "clean": "npm run clean --workspaces --if-present && rm -rf node_modules",
+    "setup": "npm install && npm run setup --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^18.4.3",
+    "@commitlint/config-conventional": "^18.4.3",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.5.2",
+    "prettier": "^3.1.1"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}

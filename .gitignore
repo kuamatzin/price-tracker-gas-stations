@@ -1,0 +1,81 @@
+# Dependencies
+node_modules/
+vendor/
+*.lock
+package-lock.json
+composer.lock
+
+# Environment
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Build output
+dist/
+build/
+out/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Laravel
+/apps/api/bootstrap/cache/
+/apps/api/storage/*.key
+/apps/api/storage/app/
+/apps/api/storage/framework/
+/apps/api/storage/logs/
+/apps/api/public/hot
+/apps/api/public/storage
+/apps/api/.phpunit.result.cache
+/apps/api/Homestead.json
+/apps/api/Homestead.yaml
+
+# React/Vite
+/apps/web/dist/
+/apps/web/.vite/
+/apps/web/*.local
+
+# Testing
+coverage/
+*.lcov
+.nyc_output/
+
+# Docker
+docker-compose.override.yml
+.docker/
+
+# Temporary files
+*.tmp
+temp/
+tmp/
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Debug files
+.ai/
+debug.log
+error.log
+
+# BMAD
+.bmad-core/
+.claude
+.windsurf
