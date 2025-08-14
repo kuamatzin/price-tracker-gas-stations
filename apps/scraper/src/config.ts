@@ -6,25 +6,33 @@ export const config = {
   database: {
     url:
       process.env.DATABASE_URL ||
-      "postgresql://fuelintel:fuelintel_dev_2024@localhost:5432/fuelintel",
+      "postgresql://user:pass@localhost:5432/fuelintel",
+    poolMin: 2,
+    poolMax: 10,
   },
   api: {
-    baseUrl: process.env.API_BASE_URL || "http://localhost:8000",
-    scraperKey: process.env.SCRAPER_API_KEY || "",
+    catalogBase: "https://api-catalogo.cne.gob.mx/api/utiles",
+    pricingBase: "https://api-reportediario.cne.gob.mx/api/EstacionServicio",
   },
   scraper: {
-    intervalMinutes: parseInt(process.env.SCRAPER_INTERVAL_MINUTES || "30", 10),
-    batchSize: parseInt(process.env.SCRAPER_BATCH_SIZE || "100", 10),
-    retryAttempts: parseInt(process.env.SCRAPER_RETRY_ATTEMPTS || "3", 10),
-    timeout: parseInt(process.env.SCRAPER_TIMEOUT || "30000", 10),
+    maxRetries: parseInt(process.env.MAX_RETRIES || "5", 10),
+    rateLimit: parseInt(process.env.RATE_LIMIT || "10", 10),
+    retryDelay: {
+      base: 1000,
+      multiplier: 2,
+      maxDelay: 30000,
+    },
+    circuitBreaker: {
+      failureThreshold: 10,
+      cooldownPeriod: 5 * 60 * 1000,
+    },
   },
-  government: {
-    pricesUrl:
-      process.env.GOV_PRICES_URL ||
-      "https://api.datos.gob.mx/v1/precio.gasolina",
-    stationsUrl:
-      process.env.GOV_STATIONS_URL ||
-      "https://api.datos.gob.mx/v1/estaciones.servicio",
+  logging: {
+    level: process.env.LOG_LEVEL || "info",
+  },
+  sentry: {
+    dsn: process.env.SENTRY_DSN || "",
   },
   environment: process.env.NODE_ENV || "development",
+  dryRun: process.env.DRY_RUN === "true",
 };

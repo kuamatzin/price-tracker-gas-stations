@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-api:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: fuelintel
+          POSTGRES_PASSWORD: fuelintel_test
+          POSTGRES_DB: fuelintel_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, xml, pdo_pgsql
+          coverage: none
+
+      - name: Install API dependencies
+        run: |
+          cd apps/api
+          composer install --prefer-dist --no-progress
+
+      - name: Create .env file
+        run: |
+          cd apps/api
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Run migrations
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_DATABASE: fuelintel_test
+          DB_USERNAME: fuelintel
+          DB_PASSWORD: fuelintel_test
+        run: |
+          cd apps/api
+          php artisan migrate --force
+
+      - name: Run tests
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_DATABASE: fuelintel_test
+          DB_USERNAME: fuelintel
+          DB_PASSWORD: fuelintel_test
+        run: |
+          cd apps/api
+          php artisan test
+
+  test-web:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run web tests
+        run: |
+          cd apps/web
+          npm run test
+
+  test-scraper:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run scraper tests
+        run: |
+          cd apps/scraper
+          npm test
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linting
+        run: npm run lint

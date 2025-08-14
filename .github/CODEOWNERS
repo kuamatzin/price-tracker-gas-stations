@@ -1,0 +1,18 @@
+# CODEOWNERS for FuelIntel Project
+# These owners will be requested for review when someone opens a pull request.
+
+# Global owners
+* @carloscuamatzin
+
+# Frontend
+/apps/web/ @carloscuamatzin
+
+# Backend
+/apps/api/ @carloscuamatzin
+
+# Scraper
+/apps/scraper/ @carloscuamatzin
+
+# Documentation
+/docs/ @carloscuamatzin
+*.md @carloscuamatzin
