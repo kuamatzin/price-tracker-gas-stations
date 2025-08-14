@@ -1,14 +1,47 @@
-import { config } from "./config";
+import config from "./config";
+import { orchestrator } from "./orchestrator";
+import { logger } from "./utils/logger";
+import { monitoringServer } from "./monitoring/server";
 
 async function main() {
-  console.log("FuelIntel Scraper Starting...");
-  console.log("Environment:", config.environment);
-  console.log("Database URL:", config.database.url);
+  logger.info("FuelIntel Scraper Starting...", {
+    environment: config.environment,
+    dryRun: config.dryRun,
+  });
 
-  // TODO: Initialize database connection
-  // TODO: Start scraping jobs
+  monitoringServer.start();
 
-  console.log("Scraper initialized successfully");
+  process.on("SIGINT", async () => {
+    logger.info("Received SIGINT, stopping scraper...");
+    orchestrator.stop();
+    await monitoringServer.stop();
+    process.exit(0);
+  });
+
+  process.on("SIGTERM", async () => {
+    logger.info("Received SIGTERM, stopping scraper...");
+    orchestrator.stop();
+    await monitoringServer.stop();
+    process.exit(0);
+  });
+
+  try {
+    await orchestrator.run({
+      dryRun: config.dryRun,
+    });
+
+    logger.info("Scraping completed successfully");
+    await monitoringServer.stop();
+    process.exit(0);
+  } catch (error) {
+    logger.error("Scraping failed", { error });
+    await monitoringServer.stop();
+    process.exit(1);
+  }
 }
 
-main().catch(console.error);
+main().catch(async (error) => {
+  logger.error("Fatal error", { error });
+  await monitoringServer.stop();
+  process.exit(1);
+});

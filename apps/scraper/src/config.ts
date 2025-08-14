@@ -2,13 +2,13 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-export const config = {
+const config = {
   database: {
     url:
       process.env.DATABASE_URL ||
       "postgresql://user:pass@localhost:5432/fuelintel",
-    poolMin: 2,
-    poolMax: 10,
+    poolMin: parseInt(process.env.DATABASE_POOL_MIN || "2", 10),
+    poolMax: parseInt(process.env.DATABASE_POOL_MAX || "10", 10),
   },
   api: {
     catalogBase: "https://api-catalogo.cne.gob.mx/api/utiles",
@@ -27,6 +27,13 @@ export const config = {
       cooldownPeriod: 5 * 60 * 1000,
     },
   },
+  webhook: {
+    url: process.env.WEBHOOK_URL || "",
+    secret: process.env.WEBHOOK_SECRET || "",
+  },
+  monitoring: {
+    port: parseInt(process.env.METRICS_PORT || "9090", 10),
+  },
   logging: {
     level: process.env.LOG_LEVEL || "info",
   },
@@ -36,3 +43,5 @@ export const config = {
   environment: process.env.NODE_ENV || "development",
   dryRun: process.env.DRY_RUN === "true",
 };
+
+export default config;

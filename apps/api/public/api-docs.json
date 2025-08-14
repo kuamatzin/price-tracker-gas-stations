@@ -1,0 +1,159 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "FuelIntel API",
+        "description": "API for Mexico fuel pricing information",
+        "version": "1.0.0",
+        "contact": {
+            "name": "FuelIntel Support",
+            "email": "support@fuelintel.mx"
+        }
+    },
+    "servers": [
+        {
+            "url": "http://localhost:8000/api",
+            "description": "Local development server"
+        },
+        {
+            "url": "https://api.fuelintel.mx/api",
+            "description": "Production server"
+        }
+    ],
+    "paths": {
+        "/health": {
+            "get": {
+                "tags": ["System"],
+                "summary": "Health check endpoint",
+                "description": "Returns the health status of the API and its dependencies",
+                "responses": {
+                    "200": {
+                        "description": "System is healthy",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HealthResponse"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "System is unhealthy or degraded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HealthResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/health": {
+            "get": {
+                "tags": ["System"],
+                "summary": "Versioned health check endpoint",
+                "description": "Returns the health status of the API v1",
+                "responses": {
+                    "200": {
+                        "description": "System is healthy"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "HealthResponse": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": ["healthy", "degraded", "unhealthy"],
+                        "description": "Overall system status"
+                    },
+                    "timestamp": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "Current server timestamp"
+                    },
+                    "services": {
+                        "type": "object",
+                        "properties": {
+                            "database": {
+                                "$ref": "#/components/schemas/ServiceStatus"
+                            },
+                            "redis": {
+                                "$ref": "#/components/schemas/ServiceStatus"
+                            },
+                            "scraper": {
+                                "$ref": "#/components/schemas/ScraperStatus"
+                            }
+                        }
+                    },
+                    "version": {
+                        "type": "object",
+                        "properties": {
+                            "api": {
+                                "type": "string"
+                            },
+                            "laravel": {
+                                "type": "string"
+                            },
+                            "php": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "ServiceStatus": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": ["connected", "disconnected", "error"]
+                    },
+                    "latency_ms": {
+                        "type": "number",
+                        "description": "Connection latency in milliseconds"
+                    },
+                    "error": {
+                        "type": "string",
+                        "description": "Error message if service is down"
+                    }
+                }
+            },
+            "ScraperStatus": {
+                "type": "object",
+                "properties": {
+                    "last_run": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "completed",
+                            "running",
+                            "failed",
+                            "never_run",
+                            "possibly_stuck"
+                        ]
+                    },
+                    "next_run": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "stations_processed": {
+                        "type": "integer"
+                    },
+                    "price_changes": {
+                        "type": "integer"
+                    }
+                }
+            }
+        }
+    }
+}

@@ -54,7 +54,7 @@ return [
 
         'stack' => [
             'driver' => 'stack',
-            'channels' => explode(',', env('LOG_STACK', 'single')),
+            'channels' => ['daily', 'sentry'],
             'ignore_exceptions' => false,
         ],
 
@@ -125,6 +125,36 @@ return [
 
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
+        ],
+        
+        'scraper' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/scraper.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 30,
+            'replace_placeholders' => true,
+        ],
+        
+        'api' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/api.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 14,
+            'replace_placeholders' => true,
+        ],
+        
+        'error' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/error.log'),
+            'level' => 'error',
+            'days' => 30,
+            'replace_placeholders' => true,
+        ],
+        
+        'sentry' => [
+            'driver' => 'sentry',
+            'level' => env('SENTRY_LOG_LEVEL', 'error'),
+            'bubble' => true,
         ],
 
     ],
