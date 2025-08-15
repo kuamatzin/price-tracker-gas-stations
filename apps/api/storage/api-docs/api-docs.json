@@ -1,0 +1,992 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "FuelIntel API Documentation",
+        "description": "REST API for Mexican fuel price intelligence",
+        "contact": {
+            "name": "FuelIntel Support",
+            "email": "api@fuelintel.mx"
+        },
+        "license": {
+            "name": "Proprietary",
+            "url": "https://fuelintel.mx/terms"
+        },
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "https://api.fuelintel.mx",
+            "description": "FuelIntel API Server"
+        }
+    ],
+    "paths": {
+        "/api/v1/competitors": {
+            "get": {
+                "tags": ["Competitors"],
+                "summary": "Get competitor analysis",
+                "description": "Returns competitor stations and price comparisons for user's station",
+                "operationId": "getCompetitors",
+                "parameters": [
+                    {
+                        "name": "radius",
+                        "in": "query",
+                        "description": "Search radius in kilometers",
+                        "required": false,
+                        "schema": {
+                            "type": "number",
+                            "default": 5,
+                            "maximum": 50,
+                            "minimum": 1,
+                            "example": 5
+                        }
+                    },
+                    {
+                        "name": "mode",
+                        "in": "query",
+                        "description": "Search mode",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "radius",
+                            "enum": ["radius", "municipio", "combined"]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "user_station": {
+                                                    "type": "object"
+                                                },
+                                                "settings": {
+                                                    "type": "object"
+                                                },
+                                                "competitors": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                },
+                                                "total_competitors": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - user has no associated station",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Station not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/geo/estados": {
+            "get": {
+                "tags": ["Geographic"],
+                "summary": "Get state-level aggregated data",
+                "description": "Returns aggregated fuel price data for all states",
+                "operationId": "getEstados",
+                "parameters": [
+                    {
+                        "name": "fuel_type",
+                        "in": "query",
+                        "description": "Filter by fuel type",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["regular", "premium", "diesel"]
+                        }
+                    },
+                    {
+                        "name": "sort_by",
+                        "in": "query",
+                        "description": "Sort field",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "avg_price",
+                                "min_price",
+                                "max_price",
+                                "station_count"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "sort_order",
+                        "in": "query",
+                        "description": "Sort order",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "asc",
+                            "enum": ["asc", "desc"]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object"
+                                            }
+                                        },
+                                        "summary": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/geo/estado/{estado}/municipios": {
+            "get": {
+                "tags": ["Geographic"],
+                "summary": "Get municipalities by state",
+                "description": "Returns aggregated fuel price data for municipalities in a state",
+                "operationId": "getMunicipiosByEstado",
+                "parameters": [
+                    {
+                        "name": "estado",
+                        "in": "path",
+                        "description": "State ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "fuel_type",
+                        "in": "query",
+                        "description": "Filter by fuel type",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["regular", "premium", "diesel"]
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Items per page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/geo/municipio/{municipio}/stats": {
+            "get": {
+                "tags": ["Geographic"],
+                "summary": "Get municipality statistics",
+                "description": "Returns detailed statistics for a specific municipality",
+                "operationId": "getMunicipioStats",
+                "parameters": [
+                    {
+                        "name": "municipio",
+                        "in": "path",
+                        "description": "Municipality ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 123
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Municipality not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/geo/compare": {
+            "post": {
+                "tags": ["Geographic"],
+                "summary": "Compare geographic areas",
+                "description": "Compare fuel prices across multiple states or municipalities",
+                "operationId": "compareAreas",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": ["areas"],
+                                "properties": {
+                                    "areas": {
+                                        "type": "array",
+                                        "items": {
+                                            "required": ["type", "id"],
+                                            "properties": {
+                                                "type": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "estado",
+                                                        "municipio"
+                                                    ]
+                                                },
+                                                "id": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "minItems": 2
+                                    },
+                                    "fuel_types": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string",
+                                            "enum": [
+                                                "regular",
+                                                "premium",
+                                                "diesel"
+                                            ]
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/geo/heatmap": {
+            "get": {
+                "tags": ["Geographic"],
+                "summary": "Get price heatmap data",
+                "description": "Returns heatmap data for fuel prices within geographic bounds",
+                "operationId": "getHeatmap",
+                "parameters": [
+                    {
+                        "name": "north",
+                        "in": "query",
+                        "description": "Northern boundary latitude",
+                        "required": true,
+                        "schema": {
+                            "type": "number",
+                            "format": "float",
+                            "maximum": 90,
+                            "minimum": -90
+                        }
+                    },
+                    {
+                        "name": "south",
+                        "in": "query",
+                        "description": "Southern boundary latitude",
+                        "required": true,
+                        "schema": {
+                            "type": "number",
+                            "format": "float",
+                            "maximum": 90,
+                            "minimum": -90
+                        }
+                    },
+                    {
+                        "name": "east",
+                        "in": "query",
+                        "description": "Eastern boundary longitude",
+                        "required": true,
+                        "schema": {
+                            "type": "number",
+                            "format": "float",
+                            "maximum": 180,
+                            "minimum": -180
+                        }
+                    },
+                    {
+                        "name": "west",
+                        "in": "query",
+                        "description": "Western boundary longitude",
+                        "required": true,
+                        "schema": {
+                            "type": "number",
+                            "format": "float",
+                            "maximum": 180,
+                            "minimum": -180
+                        }
+                    },
+                    {
+                        "name": "zoom",
+                        "in": "query",
+                        "description": "Map zoom level",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 20,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "fuel_type",
+                        "in": "query",
+                        "description": "Fuel type for heatmap",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "regular",
+                            "enum": ["regular", "premium", "diesel"]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/prices/current": {
+            "get": {
+                "tags": ["Prices"],
+                "summary": "Get current fuel prices",
+                "description": "Returns latest fuel prices for all stations with optional filters",
+                "operationId": "getCurrentPrices",
+                "parameters": [
+                    {
+                        "name": "entidad",
+                        "in": "query",
+                        "description": "Filter by state ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "municipio",
+                        "in": "query",
+                        "description": "Filter by municipality ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 123
+                        }
+                    },
+                    {
+                        "name": "brand",
+                        "in": "query",
+                        "description": "Filter by brand",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "Pemex",
+                                "Shell",
+                                "BP",
+                                "Chevron",
+                                "Mobil",
+                                "Exxon"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "fuel_type",
+                        "in": "query",
+                        "description": "Filter by fuel type",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["regular", "premium", "diesel"]
+                        }
+                    },
+                    {
+                        "name": "fresh",
+                        "in": "query",
+                        "description": "Force fresh data (bypass cache)",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "default": false
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Current prices retrieved successfully"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/prices/station/{numero}": {
+            "get": {
+                "tags": ["Prices"],
+                "summary": "Get prices for specific station",
+                "description": "Returns current prices for a specific station",
+                "operationId": "getStationPrices",
+                "parameters": [
+                    {
+                        "name": "numero",
+                        "in": "path",
+                        "description": "Station number",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "12345"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Station prices retrieved successfully"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Station not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/prices/nearby": {
+            "post": {
+                "tags": ["Prices"],
+                "summary": "Get nearby station prices",
+                "description": "Returns prices for stations within specified radius of coordinates",
+                "operationId": "getNearbyPrices",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": ["lat", "lng"],
+                                "properties": {
+                                    "lat": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 19.4326
+                                    },
+                                    "lng": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": -99.1332
+                                    },
+                                    "radius": {
+                                        "description": "Radius in kilometers",
+                                        "type": "integer",
+                                        "example": 5
+                                    },
+                                    "fresh": {
+                                        "description": "Force fresh data",
+                                        "type": "boolean",
+                                        "example": false
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Nearby prices retrieved successfully"
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/trends/station/{stationId}": {
+            "get": {
+                "tags": ["Trends"],
+                "summary": "Get price trends for a station",
+                "description": "Returns historical price trends for a specific station",
+                "operationId": "getStationTrends",
+                "parameters": [
+                    {
+                        "name": "stationId",
+                        "in": "path",
+                        "description": "Station ID",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "example": "12345"
+                        }
+                    },
+                    {
+                        "name": "start_date",
+                        "in": "query",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2024-01-01"
+                        }
+                    },
+                    {
+                        "name": "end_date",
+                        "in": "query",
+                        "description": "End date (YYYY-MM-DD)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2024-01-31"
+                        }
+                    },
+                    {
+                        "name": "period",
+                        "in": "query",
+                        "description": "Period for moving average (days)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 7,
+                            "example": 7
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/trends/market": {
+            "get": {
+                "tags": ["Trends"],
+                "summary": "Get market price trends",
+                "description": "Returns aggregated market price trends for a region",
+                "operationId": "getMarketTrends",
+                "parameters": [
+                    {
+                        "name": "entidad_id",
+                        "in": "query",
+                        "description": "State ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "municipio_id",
+                        "in": "query",
+                        "description": "Municipality ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 123
+                        }
+                    },
+                    {
+                        "name": "start_date",
+                        "in": "query",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2024-01-01"
+                        }
+                    },
+                    {
+                        "name": "end_date",
+                        "in": "query",
+                        "description": "End date (YYYY-MM-DD)",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2024-01-31"
+                        }
+                    },
+                    {
+                        "name": "grouping",
+                        "in": "query",
+                        "description": "Data grouping period",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "daily",
+                            "enum": ["daily", "weekly", "monthly"]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "sanctum": {
+                "type": "http",
+                "description": "Laravel Sanctum token authentication",
+                "bearerFormat": "token",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Prices",
+            "description": "Fuel price endpoints"
+        },
+        {
+            "name": "Trends",
+            "description": "Price trend analysis endpoints"
+        },
+        {
+            "name": "Competitors",
+            "description": "Competitor analysis endpoints"
+        },
+        {
+            "name": "Geographic",
+            "description": "Geographic aggregation endpoints"
+        }
+    ]
+}

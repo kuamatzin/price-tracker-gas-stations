@@ -1,0 +1,602 @@
+{
+    "info": {
+        "name": "FuelIntel API",
+        "description": "Complete API collection for FuelIntel platform - Mexican fuel price intelligence",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{auth_token}}",
+                "type": "string"
+            }
+        ]
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "https://api.fuelintel.mx",
+            "type": "string"
+        },
+        {
+            "key": "auth_token",
+            "value": "",
+            "type": "string",
+            "description": "Your API authentication token"
+        },
+        {
+            "key": "test_email",
+            "value": "test@example.com",
+            "type": "string",
+            "description": "Test user email"
+        },
+        {
+            "key": "test_password",
+            "value": "password123",
+            "type": "string",
+            "description": "Test user password"
+        }
+    ],
+    "item": [
+        {
+            "name": "Authentication",
+            "item": [
+                {
+                    "name": "Register",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 201\", function () {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "",
+                                    "var jsonData = pm.response.json();",
+                                    "if (jsonData.data && jsonData.data.token) {",
+                                    "    pm.environment.set(\"auth_token\", jsonData.data.token);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\",\n  \"name\": \"Test User\",\n  \"station_numero\": \"12345\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/auth/register",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "auth", "register"]
+                        }
+                    }
+                },
+                {
+                    "name": "Login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test(\"Response has token\", function () {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.expect(jsonData.data).to.have.property('token');",
+                                    "    pm.environment.set(\"auth_token\", jsonData.data.token);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"{{test_email}}\",\n  \"password\": \"{{test_password}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/auth/login",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "auth", "login"]
+                        }
+                    }
+                },
+                {
+                    "name": "Logout",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/auth/logout",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "auth", "logout"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get User Profile",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/auth/user",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "auth", "user"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Prices",
+            "item": [
+                {
+                    "name": "Get Current Prices",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test(\"Response has data array\", function () {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.expect(jsonData).to.have.property('data');",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/prices/current?entidad=1&brand=Pemex&fuel_type=regular&page=1",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "prices", "current"],
+                            "query": [
+                                {
+                                    "key": "entidad",
+                                    "value": "1",
+                                    "description": "State ID"
+                                },
+                                {
+                                    "key": "brand",
+                                    "value": "Pemex",
+                                    "description": "Station brand"
+                                },
+                                {
+                                    "key": "fuel_type",
+                                    "value": "regular",
+                                    "description": "Fuel type (regular, premium, diesel)"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1",
+                                    "description": "Page number"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Station Prices",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/prices/station/12345",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "prices", "station", "12345"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Nearby Prices",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"lat\": 19.4326,\n  \"lng\": -99.1332,\n  \"radius\": 5,\n  \"fresh\": false\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/prices/nearby",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "prices", "nearby"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Trends",
+            "item": [
+                {
+                    "name": "Get Station Trends",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/trends/station/12345?start_date=2024-01-01&end_date=2024-01-31&period=7",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "trends", "station", "12345"],
+                            "query": [
+                                {
+                                    "key": "start_date",
+                                    "value": "2024-01-01"
+                                },
+                                {
+                                    "key": "end_date",
+                                    "value": "2024-01-31"
+                                },
+                                {
+                                    "key": "period",
+                                    "value": "7",
+                                    "description": "Moving average period in days"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Market Trends",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/trends/market?entidad_id=1&start_date=2024-01-01&end_date=2024-01-31&grouping=daily",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "trends", "market"],
+                            "query": [
+                                {
+                                    "key": "entidad_id",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "start_date",
+                                    "value": "2024-01-01"
+                                },
+                                {
+                                    "key": "end_date",
+                                    "value": "2024-01-31"
+                                },
+                                {
+                                    "key": "grouping",
+                                    "value": "daily",
+                                    "description": "daily, weekly, or monthly"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Competitors",
+            "item": [
+                {
+                    "name": "Get Competitors",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/competitors?radius=5&mode=radius",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "competitors"],
+                            "query": [
+                                {
+                                    "key": "radius",
+                                    "value": "5",
+                                    "description": "Search radius in kilometers"
+                                },
+                                {
+                                    "key": "mode",
+                                    "value": "radius",
+                                    "description": "radius, municipio, or combined"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Geographic",
+            "item": [
+                {
+                    "name": "Get Estados",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/geo/estados?fuel_type=regular&sort_by=avg_price&sort_order=asc",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "geo", "estados"],
+                            "query": [
+                                {
+                                    "key": "fuel_type",
+                                    "value": "regular"
+                                },
+                                {
+                                    "key": "sort_by",
+                                    "value": "avg_price"
+                                },
+                                {
+                                    "key": "sort_order",
+                                    "value": "asc"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Municipios by Estado",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/geo/estado/1/municipios?page=1&per_page=20",
+                            "host": ["{{base_url}}"],
+                            "path": [
+                                "api",
+                                "v1",
+                                "geo",
+                                "estado",
+                                "1",
+                                "municipios"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "per_page",
+                                    "value": "20"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Municipio Stats",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/geo/municipio/123/stats",
+                            "host": ["{{base_url}}"],
+                            "path": [
+                                "api",
+                                "v1",
+                                "geo",
+                                "municipio",
+                                "123",
+                                "stats"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Compare Areas",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"areas\": [\n    {\n      \"type\": \"estado\",\n      \"id\": 1\n    },\n    {\n      \"type\": \"estado\",\n      \"id\": 2\n    }\n  ],\n  \"fuel_types\": [\"regular\", \"premium\", \"diesel\"]\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/geo/compare",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "geo", "compare"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Heatmap",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/geo/heatmap?north=20.0&south=19.0&east=-98.0&west=-100.0&zoom=10&fuel_type=regular",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "geo", "heatmap"],
+                            "query": [
+                                {
+                                    "key": "north",
+                                    "value": "20.0"
+                                },
+                                {
+                                    "key": "south",
+                                    "value": "19.0"
+                                },
+                                {
+                                    "key": "east",
+                                    "value": "-98.0"
+                                },
+                                {
+                                    "key": "west",
+                                    "value": "-100.0"
+                                },
+                                {
+                                    "key": "zoom",
+                                    "value": "10"
+                                },
+                                {
+                                    "key": "fuel_type",
+                                    "value": "regular"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "History",
+            "item": [
+                {
+                    "name": "Get Price History",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/history/prices?station_id=12345&start_date=2024-01-01&end_date=2024-01-31&fuel_type=regular",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "history", "prices"],
+                            "query": [
+                                {
+                                    "key": "station_id",
+                                    "value": "12345"
+                                },
+                                {
+                                    "key": "start_date",
+                                    "value": "2024-01-01"
+                                },
+                                {
+                                    "key": "end_date",
+                                    "value": "2024-01-31"
+                                },
+                                {
+                                    "key": "fuel_type",
+                                    "value": "regular"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Analysis",
+            "item": [
+                {
+                    "name": "Get Price Analysis",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/analysis/prices?station_id=12345&period=30",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "analysis", "prices"],
+                            "query": [
+                                {
+                                    "key": "station_id",
+                                    "value": "12345"
+                                },
+                                {
+                                    "key": "period",
+                                    "value": "30"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Status",
+            "item": [
+                {
+                    "name": "Health Check",
+                    "request": {
+                        "auth": {
+                            "type": "noauth"
+                        },
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/health",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "health"]
+                        }
+                    }
+                },
+                {
+                    "name": "API Status Dashboard",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/status/dashboard",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "status", "dashboard"]
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "event": [
+        {
+            "listen": "prerequest",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    "// Add correlation ID to all requests",
+                    "pm.request.headers.add({",
+                    "    key: 'X-Correlation-ID',",
+                    "    value: pm.variables.replaceIn('{{$guid}}')",
+                    "});"
+                ]
+            }
+        },
+        {
+            "listen": "test",
+            "script": {
+                "type": "text/javascript",
+                "exec": [
+                    "// Check for rate limit headers",
+                    "pm.test(\"Rate limit headers present\", function () {",
+                    "    pm.response.to.have.header('X-RateLimit-Limit');",
+                    "    pm.response.to.have.header('X-RateLimit-Remaining');",
+                    "});"
+                ]
+            }
+        }
+    ]
+}
