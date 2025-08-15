@@ -1,0 +1,125 @@
+{
+    "welcome": {
+        "new_user": "Welcome to FuelIntel Bot! 🚀\n\nI'll help you monitor fuel prices and make smart decisions for your service station.\n\nTo get started, I need to link your Telegram account with FuelIntel.\n\nHow would you like to continue?",
+        "back": "Hello again, :name! 👋\n\nWhat would you like to do today?",
+        "registered": "Registration complete! Your station :station has been successfully linked."
+    },
+    "registration": {
+        "choose_type": "Do you have an existing account or would you like to create a new one?",
+        "email_prompt": "Please enter your email address:",
+        "email_invalid": "Please enter a valid email address.",
+        "station_prompt": "Enter your service station number (e.g., E12345):",
+        "station_invalid": "Please enter a valid station number.",
+        "token_sent": "We've sent a verification code to :email. Please enter it here:",
+        "token_invalid": "Incorrect code. Please check and try again.",
+        "success": "Registration completed successfully! You can now use all bot commands."
+    },
+    "errors": {
+        "unknown_command": "I don't recognize that command. Use /help to see available commands.",
+        "api_timeout": "The service is taking longer than usual. Please try again.",
+        "general": "Something went wrong. Please try again later.",
+        "no_station": "You don't have a registered station. Use /configurar to set it up.",
+        "no_permission": "You don't have permission to perform this action.",
+        "rate_limit": "You've sent too many messages. Please wait a moment before continuing.",
+        "retry_after": "Please wait %d seconds before trying again.",
+        "database": "Database access error. Please try again later.",
+        "validation": "The provided data is invalid. Please check and try again.",
+        "not_found": "Couldn't find what you were looking for. Please check and try again."
+    },
+    "suggestions": {
+        "title": "Did you mean:"
+    },
+    "commands": {
+        "start": {
+            "description": "Start the bot and see main menu"
+        },
+        "help": {
+            "description": "View list of available commands",
+            "title": "🤖 FuelIntel Available Commands"
+        },
+        "comandos": {
+            "description": "Interactive command menu",
+            "title": "📋 Command Menu"
+        },
+        "precios": {
+            "description": "View current prices at your station",
+            "no_station": "You don't have a registered station. Use /configurar to set it up.",
+            "current": "💰 Current prices at :station\n\nRegular: $:regular\nPremium: $:premium\nDiesel: $:diesel\n\nLast updated: :updated"
+        },
+        "precios_competencia": {
+            "description": "View nearby competitor prices",
+            "title": "🏪 Competitor Prices",
+            "no_competitors": "No competitors found within a 5km radius."
+        },
+        "precio_promedio": {
+            "description": "View average prices in your municipality",
+            "title": "📈 Municipal Average",
+            "result": "Average in :municipio\n\nRegular: $:regular\nPremium: $:premium\nDiesel: $:diesel"
+        },
+        "tendencia": {
+            "description": "View price trends",
+            "title": "📊 Price Trends (:days days)",
+            "increasing": "📈 Rising",
+            "decreasing": "📉 Falling",
+            "stable": "➡️ Stable"
+        },
+        "ranking": {
+            "description": "View your position among competitors",
+            "title": "🏆 Your Price Ranking",
+            "position": "You're in position #:position of :total stations in your area."
+        },
+        "configurar": {
+            "description": "Configure bot preferences",
+            "title": "⚙️ Configuration",
+            "saved": "✅ Configuration saved successfully"
+        },
+        "mi_estacion": {
+            "description": "Update your station data",
+            "title": "⛽ My Station",
+            "current": "Current station: :station",
+            "change_prompt": "Enter the new station number:"
+        },
+        "notificaciones": {
+            "description": "Configure price alerts",
+            "title": "🔔 Notification Settings",
+            "enabled": "Notifications enabled",
+            "disabled": "Notifications disabled"
+        },
+        "silencio": {
+            "description": "Temporarily pause notifications",
+            "activated": "🔇 Notifications paused for :hours hours",
+            "deactivated": "🔔 Notifications reactivated"
+        },
+        "idioma": {
+            "description": "Change bot language",
+            "title": "🌐 Select Language",
+            "changed": "✅ Language changed to :language"
+        }
+    },
+    "buttons": {
+        "back": "⬅️ Back",
+        "cancel": "❌ Cancel",
+        "confirm": "✅ Confirm",
+        "yes": "Yes",
+        "no": "No",
+        "connect_existing": "🔗 Connect existing account",
+        "create_new": "📝 Create new account",
+        "view_prices": "💰 View prices",
+        "analysis": "📊 Analysis",
+        "configuration": "⚙️ Configuration",
+        "help": "❓ Help",
+        "main_menu": "📋 Main menu"
+    },
+    "notifications": {
+        "price_alert": "⚠️ Price Alert\n\n:competitor changed their :fuel_type price:\nPrevious: $:old_price\nNew: $:new_price\nDifference: :difference",
+        "daily_summary": "📊 Daily Summary\n\nYour position: #:ranking of :total\nMunicipal average: $:average\nYour price: $:your_price\nDifference: :difference",
+        "competitor_alert": "🏪 New Competitor\n\nA new station was detected nearby:\n:station_name\nDistance: :distance km\nPrices from: $:min_price"
+    },
+    "time": {
+        "just_now": "just now",
+        "minutes_ago": ":count minutes ago",
+        "hours_ago": ":count hours ago",
+        "days_ago": ":count days ago",
+        "weeks_ago": ":count weeks ago"
+    }
+}

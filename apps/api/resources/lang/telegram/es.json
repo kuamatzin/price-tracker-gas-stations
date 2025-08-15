@@ -1,0 +1,125 @@
+{
+    "welcome": {
+        "new_user": "¡Bienvenido a FuelIntel Bot! 🚀\n\nTe ayudaré a monitorear precios de combustible y tomar decisiones inteligentes para tu estación de servicio.\n\nPara comenzar, necesito vincular tu cuenta de Telegram con FuelIntel.\n\n¿Cómo deseas continuar?",
+        "back": "¡Hola de nuevo, :name! 👋\n\n¿Qué deseas hacer hoy?",
+        "registered": "¡Registro completado! Tu estación :station ha sido vinculada exitosamente."
+    },
+    "registration": {
+        "choose_type": "¿Tienes una cuenta existente o deseas crear una nueva?",
+        "email_prompt": "Por favor, ingresa tu correo electrónico:",
+        "email_invalid": "Por favor, ingresa un correo electrónico válido.",
+        "station_prompt": "Ingresa el número de tu estación de servicio (ej: E12345):",
+        "station_invalid": "Por favor, ingresa un número de estación válido.",
+        "token_sent": "Te hemos enviado un código de verificación a :email. Por favor, ingrésalo aquí:",
+        "token_invalid": "Código incorrecto. Por favor, verifica e intenta de nuevo.",
+        "success": "¡Registro completado exitosamente! Ya puedes usar todos los comandos del bot."
+    },
+    "errors": {
+        "unknown_command": "No reconozco ese comando. Usa /help para ver los comandos disponibles.",
+        "api_timeout": "El servicio está tardando más de lo normal. Por favor intenta de nuevo.",
+        "general": "Algo salió mal. Por favor intenta de nuevo más tarde.",
+        "no_station": "No tienes una estación registrada. Usa /configurar para establecerla.",
+        "no_permission": "No tienes permisos para realizar esta acción.",
+        "rate_limit": "Has enviado demasiados mensajes. Por favor espera un momento antes de continuar.",
+        "retry_after": "Por favor espera %d segundos antes de intentar de nuevo.",
+        "database": "Error al acceder a la base de datos. Por favor intenta más tarde.",
+        "validation": "Los datos proporcionados no son válidos. Por favor verifica e intenta de nuevo.",
+        "not_found": "No se encontró lo que buscabas. Por favor verifica e intenta de nuevo."
+    },
+    "suggestions": {
+        "title": "Quizás quisiste decir:"
+    },
+    "commands": {
+        "start": {
+            "description": "Iniciar el bot y ver menú principal"
+        },
+        "help": {
+            "description": "Ver lista de comandos disponibles",
+            "title": "🤖 Comandos Disponibles de FuelIntel"
+        },
+        "comandos": {
+            "description": "Menú interactivo de comandos",
+            "title": "📋 Menú de Comandos"
+        },
+        "precios": {
+            "description": "Ver precios actuales de tu estación",
+            "no_station": "No tienes una estación registrada. Usa /configurar para establecerla.",
+            "current": "💰 Precios actuales en :station\n\nRegular: $:regular\nPremium: $:premium\nDiesel: $:diesel\n\nÚltima actualización: :updated"
+        },
+        "precios_competencia": {
+            "description": "Ver precios de competidores cercanos",
+            "title": "🏪 Precios de Competencia",
+            "no_competitors": "No se encontraron competidores en un radio de 5km."
+        },
+        "precio_promedio": {
+            "description": "Ver promedio de precios en tu municipio",
+            "title": "📈 Promedio Municipal",
+            "result": "Promedio en :municipio\n\nRegular: $:regular\nPremium: $:premium\nDiesel: $:diesel"
+        },
+        "tendencia": {
+            "description": "Ver tendencia de precios",
+            "title": "📊 Tendencia de Precios (:days días)",
+            "increasing": "📈 Subiendo",
+            "decreasing": "📉 Bajando",
+            "stable": "➡️ Estable"
+        },
+        "ranking": {
+            "description": "Ver tu posición entre competidores",
+            "title": "🏆 Tu Ranking de Precios",
+            "position": "Estás en la posición #:position de :total estaciones en tu zona."
+        },
+        "configurar": {
+            "description": "Configurar preferencias del bot",
+            "title": "⚙️ Configuración",
+            "saved": "✅ Configuración guardada exitosamente"
+        },
+        "mi_estacion": {
+            "description": "Actualizar datos de tu estación",
+            "title": "⛽ Mi Estación",
+            "current": "Estación actual: :station",
+            "change_prompt": "Ingresa el nuevo número de estación:"
+        },
+        "notificaciones": {
+            "description": "Configurar alertas de precios",
+            "title": "🔔 Configuración de Notificaciones",
+            "enabled": "Notificaciones activadas",
+            "disabled": "Notificaciones desactivadas"
+        },
+        "silencio": {
+            "description": "Pausar notificaciones temporalmente",
+            "activated": "🔇 Notificaciones pausadas por :hours horas",
+            "deactivated": "🔔 Notificaciones reactivadas"
+        },
+        "idioma": {
+            "description": "Cambiar idioma del bot",
+            "title": "🌐 Seleccionar Idioma",
+            "changed": "✅ Idioma cambiado a :language"
+        }
+    },
+    "buttons": {
+        "back": "⬅️ Volver",
+        "cancel": "❌ Cancelar",
+        "confirm": "✅ Confirmar",
+        "yes": "Sí",
+        "no": "No",
+        "connect_existing": "🔗 Conectar cuenta existente",
+        "create_new": "📝 Crear cuenta nueva",
+        "view_prices": "💰 Ver precios",
+        "analysis": "📊 Análisis",
+        "configuration": "⚙️ Configuración",
+        "help": "❓ Ayuda",
+        "main_menu": "📋 Menú principal"
+    },
+    "notifications": {
+        "price_alert": "⚠️ Alerta de Precio\n\n:competitor cambió su precio de :fuel_type:\nAnterior: $:old_price\nNuevo: $:new_price\nDiferencia: :difference",
+        "daily_summary": "📊 Resumen Diario\n\nTu posición: #:ranking de :total\nPromedio municipal: $:average\nTu precio: $:your_price\nDiferencia: :difference",
+        "competitor_alert": "🏪 Nuevo Competidor\n\nSe detectó una nueva estación cerca:\n:station_name\nDistancia: :distance km\nPrecios desde: $:min_price"
+    },
+    "time": {
+        "just_now": "justo ahora",
+        "minutes_ago": "hace :count minutos",
+        "hours_ago": "hace :count horas",
+        "days_ago": "hace :count días",
+        "weeks_ago": "hace :count semanas"
+    }
+}
