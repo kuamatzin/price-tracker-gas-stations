@@ -22,6 +22,10 @@ export class DataParser {
     municipioId: number,
   ): ParsedStation | null {
     try {
+      // Create composite municipio ID: estadoId * 1000 + municipioId
+      // Ensure municipioId is a number (it might come as a string from the API)
+      const compositeMunicipioId = estadoId * 1000 + Number(municipioId);
+
       const station: Station = {
         numero: stationPrice.Numero,
         nombre: stationPrice.Nombre || "",
@@ -29,7 +33,7 @@ export class DataParser {
         lat: stationPrice.Latitud || undefined,
         lng: stationPrice.Longitud || undefined,
         entidad_id: estadoId,
-        municipio_id: municipioId,
+        municipio_id: compositeMunicipioId,
         is_active: true,
       };
 
@@ -67,6 +71,9 @@ export class DataParser {
     estadoId: number,
     municipioId: number,
   ): ParsedStation[] {
+    // Create composite municipio ID: estadoId * 1000 + municipioId
+    // Ensure municipioId is a number (it might come as a string from the API)
+    const compositeMunicipioId = estadoId * 1000 + Number(municipioId);
     const stationMap = new Map<string, ParsedStation>();
 
     for (const stationPrice of stationPrices) {

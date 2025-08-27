@@ -79,16 +79,16 @@ class LocationSeeder extends Seeder
     private function processEstado(array $estado): void
     {
         $estadoId = $estado['EntidadFederativaId'] ?? null;
-        $estadoNombre = $estado['EntidadFederativaNombre'] ?? null;
+        $estadoNombre = $estado['Nombre'] ?? null;
         
         if (!$estadoId || !$estadoNombre) {
             $this->command->warn("Skipping estado with missing data: " . json_encode($estado));
             return;
         }
         
-        // Insert or update estado
+        // Insert or update estado (convert string ID to integer)
         DB::table('entidades')->updateOrInsert(
-            ['id' => $estadoId],
+            ['id' => (int) $estadoId],
             [
                 'nombre' => $estadoNombre,
                 'codigo' => $this->getEstadoCodigo($estadoNombre),
@@ -99,11 +99,11 @@ class LocationSeeder extends Seeder
         
         $this->command->info("Processed estado: {$estadoNombre}");
         
-        // Fetch and process municipios for this estado
+        // Fetch and process municipios for this estado (use original string format for API call)
         $municipios = $this->fetchMunicipios($estadoId);
         
         if (!empty($municipios)) {
-            $this->processMunicipios($estadoId, $municipios);
+            $this->processMunicipios((int) $estadoId, $municipios);
             $this->command->info(sprintf('  - Imported %d municipios', count($municipios)));
         } else {
             $this->command->warn("  - No municipios found for estado {$estadoNombre}");
@@ -113,7 +113,7 @@ class LocationSeeder extends Seeder
     /**
      * Fetch municipios for a specific estado
      */
-    private function fetchMunicipios(int $estadoId): array
+    private function fetchMunicipios(string $estadoId): array
     {
         $url = self::API_BASE_URL . '/municipios?EntidadFederativaId=' . $estadoId;
         
@@ -153,14 +153,18 @@ class LocationSeeder extends Seeder
         
         foreach ($municipios as $municipio) {
             $municipioId = $municipio['MunicipioId'] ?? null;
-            $municipioNombre = $municipio['MunicipioNombre'] ?? null;
+            $municipioNombre = $municipio['Nombre'] ?? null;
             
             if (!$municipioId || !$municipioNombre) {
                 continue;
             }
             
+            // Create a unique ID by combining estado and municipio IDs
+            // Format: EEMM where EE is estado (padded) and MM is municipio (padded)
+            $uniqueId = ($estadoId * 1000) + (int) $municipioId;
+            
             $data[] = [
-                'id' => $municipioId,
+                'id' => $uniqueId,
                 'entidad_id' => $estadoId,
                 'nombre' => $municipioNombre,
                 'created_at' => now(),
@@ -169,12 +173,13 @@ class LocationSeeder extends Seeder
         }
         
         if (!empty($data)) {
-            // Use upsert to handle duplicates
-            DB::table('municipios')->upsert(
-                $data,
-                ['id'], // unique key
-                ['nombre', 'updated_at'] // columns to update on conflict
-            );
+            // Insert each municipio individually to avoid issues with upsert
+            foreach ($data as $municipio) {
+                DB::table('municipios')->updateOrInsert(
+                    ['id' => $municipio['id']], // unique key
+                    $municipio // all data
+                );
+            }
         }
     }
 

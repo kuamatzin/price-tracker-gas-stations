@@ -13,6 +13,12 @@ export interface Municipio {
   Nombre: string;
 }
 
+export interface ResponseMunicipio {
+  Success: boolean;
+  Errors: string[] | null;
+  Value: StationPrice[];
+}
+
 export interface StationPrice {
   Numero: string;
   Nombre: string;
@@ -85,21 +91,24 @@ export class GovernmentAPIClient {
   ): Promise<StationPrice[]> {
     try {
       const url = `${this.pricingBase}/Petroliferos?entidadId=${entidadId}&municipioId=${municipioId}`;
-      const response = await httpClient.get<StationPrice[] | APIErrorResponse>(
-        url,
-      );
+      const response = await httpClient.get<
+        ResponseMunicipio | APIErrorResponse
+      >(url);
 
-      if (Array.isArray(response)) {
-        console.log(
-          `Fetched ${response.length} station prices for municipio ${municipioId}`,
+      if (response && typeof response === "object" && "Value" in response) {
+        const typedResponse = response as ResponseMunicipio;
+        if (Array.isArray(typedResponse.Value)) {
+          console.log(
+            `Fetched ${typedResponse.Value.length} station prices for municipio ${municipioId}`,
+          );
+          return typedResponse.Value;
+        }
+      }
+
+      if (response && typeof response === "object" && "error" in response) {
+        console.warn(
+          `No data for municipio ${municipioId}: ${(response as APIErrorResponse).error}`,
         );
-        return response;
-      } else if (
-        response &&
-        typeof response === "object" &&
-        "error" in response
-      ) {
-        console.warn(`No data for municipio ${municipioId}: ${response.error}`);
         return [];
       } else {
         console.warn(
