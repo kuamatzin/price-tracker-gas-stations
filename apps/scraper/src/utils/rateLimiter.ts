@@ -1,4 +1,4 @@
-const pLimit = require("p-limit").default;
+import pLimit from "p-limit";
 import config from "../config";
 
 export class RateLimiter {
@@ -44,4 +44,6 @@ export class RateLimiter {
   }
 }
 
-export const rateLimiter = new RateLimiter();
+// Only create singleton if not in test environment
+export const rateLimiter =
+  process.env.NODE_ENV === "test" ? null : new RateLimiter();

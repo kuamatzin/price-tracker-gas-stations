@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && npm run update-health",
+    "update-health": "node -e \"const fs=require('fs'); const h=JSON.parse(fs.readFileSync('dist/health.json')); h.build_time=new Date().toISOString(); fs.writeFileSync('dist/health.json', JSON.stringify(h,null,2))\"",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
@@ -13,6 +14,7 @@
     "test:coverage": "vitest --coverage"
   },
   "dependencies": {
+    "@sentry/react": "^10.5.0",
     "clsx": "^2.1.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
@@ -20,6 +22,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
+    "@sentry/vite-plugin": "^4.1.1",
     "@testing-library/jest-dom": "^6.6.4",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",

@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/node";
 import config from "../config";
 
 export enum CircuitBreakerState {
@@ -74,6 +75,11 @@ export class CircuitBreaker {
       console.error(
         `Circuit breaker is now OPEN after ${this.failures} consecutive failures`,
       );
+      Sentry.captureMessage("Circuit breaker opened", {
+        level: "error",
+        tags: { component: "circuit-breaker" },
+        extra: { failures: this.failures, threshold: this.failureThreshold },
+      });
     }
   }
 
@@ -127,4 +133,5 @@ export class CircuitBreaker {
   }
 }
 
-export const circuitBreaker = new CircuitBreaker();
+export const circuitBreaker =
+  process.env.NODE_ENV === "test" ? null : new CircuitBreaker();

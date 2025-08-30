@@ -58,7 +58,7 @@ jobs:
           cd apps/api
           php artisan migrate --force
 
-      - name: Run tests
+      - name: Run tests with coverage
         env:
           DB_CONNECTION: pgsql
           DB_HOST: localhost
@@ -68,7 +68,7 @@ jobs:
           DB_PASSWORD: fuelintel_test
         run: |
           cd apps/api
-          php artisan test
+          php artisan test --coverage --min=60
 
   test-web:
     runs-on: ubuntu-latest
@@ -85,10 +85,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run web tests
+      - name: Run web tests with coverage
         run: |
           cd apps/web
-          npm run test
+          npm run test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          directory: ./apps/web/coverage
+          flags: web
+          name: web-coverage
 
   test-scraper:
     runs-on: ubuntu-latest
@@ -105,10 +112,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run scraper tests
+      - name: Run scraper tests with coverage
         run: |
           cd apps/scraper
-          npm test
+          NODE_ENV=test npm run test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          directory: ./apps/scraper/coverage
+          flags: scraper
+          name: scraper-coverage
 
   lint:
     runs-on: ubuntu-latest
@@ -125,5 +139,44 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run linting
-        run: npm run lint
+      - name: Run ESLint
+        run: npm run lint --workspaces --if-present
+
+      - name: Check Prettier formatting
+        run: npx prettier --check "**/*.{js,jsx,ts,tsx,json,md,yml}"
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          tools: php-cs-fixer
+
+      - name: Run PHP CS Fixer
+        run: |
+          cd apps/api
+          php-cs-fixer fix --dry-run --diff
+
+  type-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript check - Web
+        run: |
+          cd apps/web
+          npx tsc --noEmit
+
+      - name: TypeScript check - Scraper
+        run: |
+          cd apps/scraper
+          npx tsc --noEmit

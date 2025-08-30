@@ -11,12 +11,7 @@ class RepositoryServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Future repository bindings will go here
-        // Example:
-        // $this->app->bind(
-        //     \App\Repositories\Contracts\StationRepositoryInterface::class,
-        //     \App\Repositories\StationRepository::class
-        // );
+        $this->app->singleton(\App\Repositories\PriceRepository::class);
     }
 
     /**

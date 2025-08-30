@@ -6,17 +6,23 @@ use Illuminate\Http\Request;
 use Telegram\Bot\Laravel\Facades\Telegram;
 use App\Services\Telegram\MessageRouter;
 use App\Services\Telegram\SessionManager;
+use App\Services\Telegram\CallbackHandler;
 use Illuminate\Support\Facades\Log;
 
 class TelegramController extends Controller
 {
     protected MessageRouter $router;
     protected SessionManager $sessionManager;
+    protected CallbackHandler $callbackHandler;
 
-    public function __construct(MessageRouter $router, SessionManager $sessionManager)
-    {
+    public function __construct(
+        MessageRouter $router, 
+        SessionManager $sessionManager,
+        CallbackHandler $callbackHandler
+    ) {
         $this->router = $router;
         $this->sessionManager = $sessionManager;
+        $this->callbackHandler = $callbackHandler;
     }
 
     /**
@@ -45,8 +51,13 @@ class TelegramController extends Controller
             // Load or create session
             $session = $this->sessionManager->getSession($userId);
 
-            // Route the update
-            $this->router->route($update, $session);
+            // Handle callback queries (button presses)
+            if ($callbackQuery) {
+                $this->callbackHandler->handle($callbackQuery, $session);
+            } else {
+                // Route regular messages/commands
+                $this->router->route($update, $session);
+            }
 
             // Save session state
             $this->sessionManager->saveSession($session);

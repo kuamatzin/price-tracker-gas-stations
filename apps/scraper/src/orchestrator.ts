@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/node";
 import config from "./config";
 import { retryConnection, closePool } from "./db/connection";
 import { batchUpsertStations, batchInsertPriceChanges } from "./db/queries";
@@ -56,6 +57,10 @@ export class ScraperOrchestrator {
     } catch (error) {
       status = "failed";
       logger.error("Scraping failed", { error });
+      Sentry.captureException(error, {
+        tags: { component: "orchestrator" },
+        extra: { options },
+      });
       scraperLogger.endScraping();
       this.errors.push({
         type: "ORCHESTRATOR_ERROR",

@@ -22,10 +22,11 @@ return new class extends Migration
             $table->integer('stations_found')->default(0);
             $table->integer('price_changes_detected')->default(0);
             $table->jsonb('errors')->nullable();
-            
+
             $table->index(['started_at', 'status']);
+            $table->timestamps();
         });
-        
+
         // Add CHECK constraint for status (PostgreSQL only)
         if (config('database.default') === 'pgsql') {
             DB::statement("ALTER TABLE scraper_runs ADD CONSTRAINT check_scraper_status CHECK (status IN ('running', 'completed', 'failed'))");

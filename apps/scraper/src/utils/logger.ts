@@ -1,4 +1,6 @@
 import winston from "winston";
+import DailyRotateFile from "winston-daily-rotate-file";
+import { generateCorrelationId } from "@fuelintel/shared";
 import config from "../config";
 
 const logLevels = {
@@ -34,22 +36,43 @@ const fileFormat = winston.format.combine(
   winston.format.json(),
 );
 
-const transports: winston.transport[] = [
-  new winston.transports.Console({
-    format: consoleFormat,
-  }),
-];
+const transports: winston.transport[] = [];
+
+if (config.environment !== "production") {
+  transports.push(
+    new winston.transports.Console({
+      format: consoleFormat,
+    }),
+  );
+}
 
 if (config.environment !== "test") {
   transports.push(
-    new winston.transports.File({
-      filename: "logs/error.log",
+    new DailyRotateFile({
+      filename: "logs/error-%DATE%.log",
+      datePattern: "YYYY-MM-DD",
       level: "error",
       format: fileFormat,
+      maxSize: "20m",
+      maxFiles: "30d",
+      zippedArchive: true,
     }),
-    new winston.transports.File({
-      filename: "logs/combined.log",
+    new DailyRotateFile({
+      filename: "logs/scraper-%DATE%.log",
+      datePattern: "YYYY-MM-DD",
       format: fileFormat,
+      maxSize: "20m",
+      maxFiles: "30d",
+      zippedArchive: true,
+    }),
+  );
+}
+
+if (config.environment === "production") {
+  transports.push(
+    new winston.transports.Console({
+      format: fileFormat,
+      level: "info",
     }),
   );
 }
@@ -57,11 +80,13 @@ if (config.environment !== "test") {
 export const logger = winston.createLogger({
   level: config.logging.level,
   levels: logLevels,
+  defaultMeta: { service: "scraper" },
   transports,
 });
 
 export class ScraperLogger {
   private startTime: number = 0;
+  private correlationId: string = "";
   private stats = {
     estadosProcessed: 0,
     municipiosProcessed: 0,
@@ -73,6 +98,7 @@ export class ScraperLogger {
 
   startScraping(): void {
     this.startTime = Date.now();
+    this.correlationId = generateCorrelationId();
     this.stats = {
       estadosProcessed: 0,
       municipiosProcessed: 0,
@@ -82,6 +108,7 @@ export class ScraperLogger {
       errors: [],
     };
     logger.info("Scraping session started", {
+      correlationId: this.correlationId,
       timestamp: new Date().toISOString(),
     });
   }
@@ -92,6 +119,7 @@ export class ScraperLogger {
     const seconds = ((duration % 60000) / 1000).toFixed(0);
 
     logger.info("Scraping session completed", {
+      correlationId: this.correlationId,
       duration: `${minutes}m ${seconds}s`,
       stats: this.stats,
     });
@@ -100,6 +128,7 @@ export class ScraperLogger {
   logEstadoProcessed(estadoId: number, municipiosCount: number): void {
     this.stats.estadosProcessed++;
     logger.info(`Estado ${estadoId} processed`, {
+      correlationId: this.correlationId,
       municipiosCount,
       progress: `${this.stats.estadosProcessed}/32`,
     });
@@ -109,6 +138,7 @@ export class ScraperLogger {
     this.stats.municipiosProcessed++;
     this.stats.stationsFound += stationsCount;
     logger.debug(`Municipio ${municipioId} processed`, {
+      correlationId: this.correlationId,
       stationsCount,
       totalMunicipios: this.stats.municipiosProcessed,
     });
@@ -117,6 +147,7 @@ export class ScraperLogger {
   logPriceChanges(count: number): void {
     this.stats.priceChangesDetected += count;
     logger.info(`Price changes detected: ${count}`, {
+      correlationId: this.correlationId,
       total: this.stats.priceChangesDetected,
     });
   }
@@ -124,6 +155,7 @@ export class ScraperLogger {
   logNewStations(count: number): void {
     this.stats.newStationsAdded += count;
     logger.info(`New stations added: ${count}`, {
+      correlationId: this.correlationId,
       total: this.stats.newStationsAdded,
     });
   }
@@ -136,6 +168,7 @@ export class ScraperLogger {
       timestamp: new Date(),
     });
     logger.error(`API error at ${endpoint}`, {
+      correlationId: this.correlationId,
       error: errorMessage,
       errorCount: this.stats.errors.length,
     });
@@ -143,6 +176,7 @@ export class ScraperLogger {
 
   logProgress(): void {
     logger.info("Scraping progress", {
+      correlationId: this.correlationId,
       estados: `${this.stats.estadosProcessed}/32`,
       municipios: this.stats.municipiosProcessed,
       stations: this.stats.stationsFound,
@@ -157,6 +191,7 @@ export class ScraperLogger {
   getSummary() {
     const duration = Date.now() - this.startTime;
     return {
+      correlationId: this.correlationId,
       duration,
       ...this.stats,
       successRate:
@@ -168,6 +203,10 @@ export class ScraperLogger {
             ).toFixed(2) + "%"
           : "0%",
     };
+  }
+
+  getCorrelationId(): string {
+    return this.correlationId;
   }
 }
 

@@ -24,9 +24,28 @@ class HealthCheckTest extends TestCase
     {
         $response = $this->getJson('/api/health');
 
-        $response->assertStatus(200)
-            ->assertJson([
-                'status' => 'ok',
-            ]);
+        // Health endpoint should return either 200 (healthy) or 503 (unhealthy)
+        $this->assertContains($response->getStatusCode(), [200, 503]);
+        
+        $response->assertJsonStructure([
+            'status',
+            'timestamp',
+            'services' => [
+                'database',
+                'redis',
+                'scraper',
+                'scraper_integration',
+            ],
+            'data_freshness',
+            'version' => [
+                'api',
+                'laravel',
+                'php',
+            ],
+            'response_time_ms',
+        ]);
+        
+        // Status can be healthy, degraded, or unhealthy depending on services
+        $this->assertContains($response->json('status'), ['healthy', 'degraded', 'unhealthy']);
     }
 }

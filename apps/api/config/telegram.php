@@ -46,7 +46,13 @@ return [
             'certificate_path' => env('TELEGRAM_CERTIFICATE_PATH'),
             'webhook_url' => env('TELEGRAM_WEBHOOK_URL'),
             'commands' => [
-                // Commands will be added here
+                // Price query commands
+                \App\Telegram\Commands\PreciosCommand::class,
+                \App\Telegram\Commands\PreciosTodasCommand::class,
+                \App\Telegram\Commands\PreciosCompetenciaCommand::class,
+                \App\Telegram\Commands\PrecioPromedioCommand::class,
+                \App\Telegram\Commands\PrecioCommand::class,
+                \App\Telegram\Commands\EstacionDefaultCommand::class,
             ],
         ],
     ],

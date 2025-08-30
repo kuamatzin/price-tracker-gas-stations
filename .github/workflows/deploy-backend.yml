@@ -1,0 +1,91 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/api/**"
+      - "packages/shared/**"
+      - ".github/workflows/deploy-backend.yml"
+
+env:
+  PHP_VERSION: "8.3"
+
+jobs:
+  deploy:
+    name: Deploy to Laravel Forge
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, pgsql, pdo_pgsql, redis
+          tools: composer:v2
+
+      - name: Validate composer.json
+        run: |
+          cd apps/api
+          composer validate
+
+      - name: Install dependencies
+        run: |
+          cd apps/api
+          composer install --no-dev --optimize-autoloader --no-interaction
+
+      - name: Run production build checks
+        run: |
+          cd apps/api
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+
+      - name: Trigger Laravel Forge Deployment
+        run: |
+          curl -X POST ${{ secrets.FORGE_WEBHOOK_URL }} \
+            -H "Content-Type: application/json" \
+            -d '{
+              "branch": "main",
+              "commit": "${{ github.sha }}",
+              "author": "${{ github.actor }}",
+              "message": "${{ github.event.head_commit.message }}"
+            }'
+
+      - name: Wait for deployment
+        run: sleep 30
+
+      - name: Health check
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.API_HEALTH_URL }})
+          if [ $response -eq 200 ]; then
+            echo "Health check passed"
+          else
+            echo "Health check failed with status $response"
+            exit 1
+          fi
+
+      - name: Run migration status check
+        run: |
+          curl -X GET ${{ secrets.API_URL }}/api/migration-status \
+            -H "Authorization: Bearer ${{ secrets.API_DEPLOYMENT_TOKEN }}"
+
+      - name: Clear caches on production
+        run: |
+          curl -X POST ${{ secrets.FORGE_CLEAR_CACHE_URL }} \
+            -H "Authorization: Bearer ${{ secrets.FORGE_API_TOKEN }}"
+
+      - name: Notify deployment status
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: |
+            Backend Deployment ${{ job.status }}
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          if_mention: failure

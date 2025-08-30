@@ -33,6 +33,28 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
                    $entry->isScheduledTask() ||
                    $entry->hasMonitoredTag();
         });
+        
+        Telescope::tag(function (IncomingEntry $entry) {
+            $tags = [];
+            
+            if ($entry->type === 'request') {
+                if (str_contains($entry->content['uri'] ?? '', '/webhooks/scraper')) {
+                    $tags[] = 'scraper';
+                }
+                if (str_contains($entry->content['uri'] ?? '', '/api/v1/prices')) {
+                    $tags[] = 'prices';
+                }
+                if (str_contains($entry->content['uri'] ?? '', '/api/v1/stations')) {
+                    $tags[] = 'stations';
+                }
+            }
+            
+            if ($entry->type === 'job' && str_contains($entry->content['name'] ?? '', 'Scraper')) {
+                $tags[] = 'scraper';
+            }
+            
+            return $tags;
+        });
     }
 
     /**

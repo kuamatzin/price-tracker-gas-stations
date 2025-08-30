@@ -7,11 +7,12 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasUuids;
+    use HasApiTokens, HasFactory, Notifiable, HasUuids;
 
     /**
      * The attributes that are mass assignable.
@@ -50,5 +51,20 @@ class User extends Authenticatable
             'password' => 'hashed',
             'notification_preferences' => 'array',
         ];
+    }
+
+    /**
+     * Get the station associated with the user.
+     */
+    public function station()
+    {
+        return $this->hasOneThrough(
+            Station::class,
+            UserStation::class,
+            'user_id',
+            'numero',
+            'id',
+            'station_numero'
+        );
     }
 }

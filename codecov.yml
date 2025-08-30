@@ -1,0 +1,29 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 60%
+        threshold: 5%
+    patch:
+      default:
+        target: 60%
+        threshold: 5%
+
+comment:
+  layout: "reach,diff,flags,files,footer"
+  behavior: default
+  require_changes: true
+
+flags:
+  api:
+    paths:
+      - apps/api/
+    carryforward: true
+  web:
+    paths:
+      - apps/web/
+    carryforward: true
+  scraper:
+    paths:
+      - apps/scraper/
+    carryforward: true

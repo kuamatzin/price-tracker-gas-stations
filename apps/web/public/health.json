@@ -1,0 +1,6 @@
+{
+  "status": "healthy",
+  "service": "web",
+  "version": "1.0.0",
+  "build_time": "__BUILD_TIME__"
+}

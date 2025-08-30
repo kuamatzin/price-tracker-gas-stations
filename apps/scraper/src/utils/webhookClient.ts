@@ -1,9 +1,11 @@
 import axios, { AxiosError } from "axios";
 import crypto from "crypto";
-import { logger } from "./logger";
+import { logger, scraperLogger } from "./logger";
+import { CORRELATION_ID_HEADER } from "@fuelintel/shared";
 import config from "../config";
 
 interface WebhookPayload {
+  correlation_id: string;
   started_at: string;
   completed_at: string;
   status: "completed" | "failed";
@@ -76,6 +78,7 @@ class WebhookClient {
           headers: {
             "Content-Type": "application/json",
             "X-Webhook-Signature": signature,
+            [CORRELATION_ID_HEADER]: payload.correlation_id,
           },
           timeout: 30000, // 30 second timeout
         });
@@ -128,6 +131,7 @@ class WebhookClient {
     errors: any[] = [],
   ): WebhookPayload {
     return {
+      correlation_id: scraperLogger.getCorrelationId(),
       started_at: startedAt.toISOString(),
       completed_at: completedAt.toISOString(),
       status,

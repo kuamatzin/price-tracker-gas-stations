@@ -50,7 +50,7 @@ export async function getLastPricesByStation(
 
 export async function getAllLastPrices(): Promise<Map<string, LastPrice>> {
   const query = `
-    SELECT DISTINCT ON (station_numero, fuel_type) 
+    SELECT DISTINCT ON (station_numero, fuel_type)
       station_numero, fuel_type, price, changed_at
     FROM price_changes
     ORDER BY station_numero, fuel_type, changed_at DESC

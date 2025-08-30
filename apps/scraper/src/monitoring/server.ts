@@ -41,31 +41,65 @@ export class MonitoringServer {
   }
 
   private async getHealthStatus() {
-    const checks = {
-      database: false,
-      governmentAPI: false,
-      circuitBreaker: circuitBreaker.getState() !== "OPEN",
+    const startTime = Date.now();
+    const checks: any = {
+      database: { status: "unknown", latency_ms: 0 },
+      government_api: { status: "unknown", latency_ms: 0 },
+      circuit_breaker: {
+        status: circuitBreaker.getState() !== "OPEN" ? "healthy" : "open",
+        state: circuitBreaker.getState(),
+      },
     };
 
+    // Check database
+    const dbStart = Date.now();
     try {
-      checks.database = await testConnection();
+      const connected = await testConnection();
+      checks.database = {
+        status: connected ? "healthy" : "unhealthy",
+        latency_ms: Date.now() - dbStart,
+      };
     } catch (error) {
-      console.error("Database health check failed:", error);
+      checks.database = {
+        status: "unhealthy",
+        latency_ms: Date.now() - dbStart,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
     }
 
+    // Check government API
+    const apiStart = Date.now();
     try {
-      checks.governmentAPI = await governmentAPI.testConnection();
+      const connected = await governmentAPI.testConnection();
+      checks.government_api = {
+        status: connected ? "healthy" : "unhealthy",
+        latency_ms: Date.now() - apiStart,
+      };
     } catch (error) {
-      console.error("Government API health check failed:", error);
+      checks.government_api = {
+        status: "unhealthy",
+        latency_ms: Date.now() - apiStart,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
     }
 
-    const allHealthy = Object.values(checks).every((check) => check === true);
+    const allHealthy =
+      checks.database.status === "healthy" &&
+      checks.government_api.status === "healthy" &&
+      checks.circuit_breaker.status === "healthy";
+
+    const degraded =
+      checks.circuit_breaker.status !== "healthy" ||
+      checks.government_api.status !== "healthy";
 
     return {
-      status: allHealthy ? "healthy" : "unhealthy",
+      status: allHealthy ? "healthy" : degraded ? "degraded" : "unhealthy",
       timestamp: new Date().toISOString(),
+      service: "scraper",
+      version: "1.0.0",
+      uptime_seconds: Math.round(process.uptime()),
       checks,
-      uptime: process.uptime(),
+      response_time_ms: Date.now() - startTime,
     };
   }
 
