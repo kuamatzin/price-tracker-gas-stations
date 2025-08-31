@@ -216,4 +216,121 @@ class TelegramSession
     {
         return new self($data);
     }
+
+    /**
+     * Get conversation context for NLP
+     */
+    public function getConversationContext(): array
+    {
+        return $this->data['conversation_context'] ?? [];
+    }
+
+    /**
+     * Set conversation context for NLP
+     */
+    public function setConversationContext(array $context): void
+    {
+        $this->data['conversation_context'] = $context;
+        $this->data['conversation_context']['updated_at'] = time();
+        $this->data['updated_at'] = time();
+    }
+
+    /**
+     * Merge new context with existing conversation context
+     */
+    public function mergeConversationContext(array $newContext): void
+    {
+        $existing = $this->getConversationContext();
+        
+        // Merge entities
+        if (isset($newContext['entities']) && isset($existing['entities'])) {
+            $newContext['entities'] = array_merge($existing['entities'], $newContext['entities']);
+        }
+        
+        // Keep track of last intent
+        if (isset($existing['intent'])) {
+            $newContext['last_intent'] = $existing['intent'];
+        }
+        
+        // Merge and update
+        $merged = array_merge($existing, $newContext);
+        $merged['updated_at'] = time();
+        
+        $this->setConversationContext($merged);
+    }
+
+    /**
+     * Check if conversation context is expired (5 minutes default)
+     */
+    public function isContextExpired(int $ttl = null): bool
+    {
+        $ttl = $ttl ?? config('deepseek.context_ttl_seconds', 300);
+        $context = $this->getConversationContext();
+        
+        if (empty($context) || !isset($context['updated_at'])) {
+            return true;
+        }
+        
+        return (time() - $context['updated_at']) > $ttl;
+    }
+
+    /**
+     * Clear expired conversation context
+     */
+    public function clearExpiredContext(int $ttl = null): void
+    {
+        if ($this->isContextExpired($ttl)) {
+            unset($this->data['conversation_context']);
+            $this->data['updated_at'] = time();
+        }
+    }
+
+    /**
+     * Get last query intent from context
+     */
+    public function getLastIntent(): ?string
+    {
+        $context = $this->getConversationContext();
+        return $context['intent'] ?? $context['last_intent'] ?? null;
+    }
+
+    /**
+     * Get last extracted entities from context
+     */
+    public function getLastEntities(): array
+    {
+        $context = $this->getConversationContext();
+        return $context['entities'] ?? [];
+    }
+
+    /**
+     * Add query to conversation history
+     */
+    public function addToHistory(string $query, string $response): void
+    {
+        if (!isset($this->data['conversation_history'])) {
+            $this->data['conversation_history'] = [];
+        }
+        
+        // Keep only last 5 exchanges
+        if (count($this->data['conversation_history']) >= 5) {
+            array_shift($this->data['conversation_history']);
+        }
+        
+        $this->data['conversation_history'][] = [
+            'query' => $query,
+            'response' => $response,
+            'timestamp' => time()
+        ];
+        
+        $this->data['updated_at'] = time();
+    }
+
+    /**
+     * Get conversation history
+     */
+    public function getConversationHistory(): array
+    {
+        return $this->data['conversation_history'] ?? [];
+    }
 }
