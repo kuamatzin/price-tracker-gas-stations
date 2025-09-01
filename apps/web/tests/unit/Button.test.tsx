@@ -1,41 +1,41 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import Button from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 
 describe("Button Component", () => {
   it("renders correctly with default props", () => {
     render(<Button>Click me</Button>);
     const button = screen.getByRole("button", { name: /click me/i });
     expect(button).toBeInTheDocument();
-    expect(button).toHaveClass("bg-blue-600");
+    expect(button).toHaveClass("bg-primary");
   });
 
   it("renders with different variants", () => {
-    const { rerender } = render(<Button variant="primary">Primary</Button>);
-    expect(screen.getByRole("button")).toHaveClass("bg-blue-600");
+    const { rerender } = render(<Button variant="default">Default</Button>);
+    expect(screen.getByRole("button")).toHaveClass("bg-primary");
 
     rerender(<Button variant="secondary">Secondary</Button>);
-    expect(screen.getByRole("button")).toHaveClass("bg-gray-600");
+    expect(screen.getByRole("button")).toHaveClass("bg-secondary");
 
     rerender(<Button variant="outline">Outline</Button>);
-    expect(screen.getByRole("button")).toHaveClass("border-gray-300");
+    expect(screen.getByRole("button")).toHaveClass("border");
 
     rerender(<Button variant="ghost">Ghost</Button>);
-    expect(screen.getByRole("button")).toHaveClass("bg-transparent");
+    expect(screen.getByRole("button")).toHaveClass("hover:bg-accent");
 
-    rerender(<Button variant="danger">Danger</Button>);
-    expect(screen.getByRole("button")).toHaveClass("bg-red-600");
+    rerender(<Button variant="destructive">Destructive</Button>);
+    expect(screen.getByRole("button")).toHaveClass("bg-destructive");
   });
 
   it("renders with different sizes", () => {
     const { rerender } = render(<Button size="sm">Small</Button>);
-    expect(screen.getByRole("button")).toHaveClass("h-8");
+    expect(screen.getByRole("button")).toHaveClass("h-9");
 
-    rerender(<Button size="md">Medium</Button>);
+    rerender(<Button size="default">Default</Button>);
     expect(screen.getByRole("button")).toHaveClass("h-10");
 
     rerender(<Button size="lg">Large</Button>);
-    expect(screen.getByRole("button")).toHaveClass("h-12");
+    expect(screen.getByRole("button")).toHaveClass("h-11");
   });
 
   it("handles click events", () => {
@@ -63,13 +63,17 @@ describe("Button Component", () => {
     expect(handleClick).not.toHaveBeenCalled();
   });
 
-  it("shows loading state when isLoading is true", () => {
-    render(<Button isLoading>Submit</Button>);
+  it("can be used as a child component with asChild prop", () => {
+    render(
+      <Button asChild>
+        <a href="/test">Link Button</a>
+      </Button>
+    );
 
-    const button = screen.getByRole("button");
-    expect(button).toBeDisabled();
-    expect(screen.getByText("Loading...")).toBeInTheDocument();
-    expect(button.querySelector("svg")).toHaveClass("animate-spin");
+    const link = screen.getByRole("link");
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute("href", "/test");
+    expect(link).toHaveClass("bg-primary");
   });
 
   it("applies custom className", () => {
@@ -86,18 +90,12 @@ describe("Button Component", () => {
     expect(ref).toHaveBeenCalled();
   });
 
-  it("prevents click when loading", () => {
-    const handleClick = vi.fn();
-    render(
-      <Button isLoading onClick={handleClick}>
-        Loading Button
-      </Button>,
-    );
+  it("applies focus styles correctly", () => {
+    render(<Button>Focus Test</Button>);
 
     const button = screen.getByRole("button");
-    fireEvent.click(button);
-
-    expect(handleClick).not.toHaveBeenCalled();
+    expect(button).toHaveClass("focus-visible:outline-none");
+    expect(button).toHaveClass("focus-visible:ring-2");
   });
 
   it("passes through additional props", () => {
