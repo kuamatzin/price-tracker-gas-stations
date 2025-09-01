@@ -1,20 +1,53 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useAuthStore } from '@/stores/authStore';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+
+const loginSchema = z.object({
+  email: z.string().email('Por favor ingresa un correo electrónico válido'),
+  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+  rememberMe: z.boolean().default(false),
+});
+
+type LoginFormData = z.infer<typeof loginSchema>;
 
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const { login, isLoading, error } = useAuthStore();
+  const [isLoading, setIsLoading] = useState(false);
+  const { login, error } = useAuthStore();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const form = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+      rememberMe: false,
+    },
+  });
+
+  const handleSubmit = async (data: LoginFormData) => {
+    setIsLoading(true);
     try {
-      await login(email, password);
+      await login(data.email, data.password, data.rememberMe);
       navigate('/dashboard');
     } catch (error) {
       // Error is handled by the store
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -26,66 +59,110 @@ const Login = () => {
             <span className="text-white font-bold text-xl">F</span>
           </div>
           <h2 className="mt-6 text-center text-3xl font-bold text-gray-900 dark:text-white">
-            Sign in to FuelIntel
+            Iniciar Sesión
           </h2>
+          <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
+            Accede a tu dashboard de precios de combustible
+          </p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div>
-            <label htmlFor="email" className="sr-only">
-              Email address
-            </label>
-            <input
-              id="email"
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
               name="email"
-              type="email"
-              autoComplete="email"
-              required
-              className="relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-brand-500 focus:border-brand-500"
-              placeholder="Email address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Correo electrónico</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      placeholder="tu@ejemplo.com"
+                      autoComplete="email"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-          <div>
-            <label htmlFor="password" className="sr-only">
-              Password
-            </label>
-            <input
-              id="password"
+
+            <FormField
+              control={form.control}
               name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              className="relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-brand-500 focus:border-brand-500"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Contraseña</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      placeholder="••••••••"
+                      autoComplete="current-password"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
 
-          {error && (
-            <div className="text-red-600 text-sm text-center">{error}</div>
-          )}
+            <div className="flex items-center justify-between">
+              <FormField
+                control={form.control}
+                name="rememberMe"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="text-sm font-normal">
+                        Recordarme
+                      </FormLabel>
+                    </div>
+                  </FormItem>
+                )}
+              />
 
-          <div>
-            <button
+              <Link
+                to="/forgot-password"
+                className="text-sm font-medium text-brand-600 hover:text-brand-500"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                <div className="flex">
+                  <div className="text-red-800 text-sm">
+                    {error}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <Button
               type="submit"
+              className="w-full"
               disabled={isLoading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 disabled:opacity-50"
             >
-              {isLoading ? 'Signing in...' : 'Sign in'}
-            </button>
-          </div>
+              {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+            </Button>
 
-          <div className="text-center">
-            <Link
-              to="/register"
-              className="font-medium text-brand-600 hover:text-brand-500"
-            >
-              Don't have an account? Sign up
-            </Link>
-          </div>
-        </form>
+            <div className="text-center">
+              <Link
+                to="/register"
+                className="font-medium text-brand-600 hover:text-brand-500"
+              >
+                ¿No tienes cuenta? Regístrate
+              </Link>
+            </div>
+          </form>
+        </Form>
       </div>
     </div>
   );
