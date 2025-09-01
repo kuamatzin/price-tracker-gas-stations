@@ -17,9 +17,9 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
         // Telescope::night();
 
         $this->hideSensitiveRequestDetails();
-        
+
         // Only enable Telescope if TELESCOPE_ENABLED is true
-        if (!config('telescope.enabled', false)) {
+        if (! config('telescope.enabled', false)) {
             Telescope::stopRecording();
         }
 
@@ -33,10 +33,10 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
                    $entry->isScheduledTask() ||
                    $entry->hasMonitoredTag();
         });
-        
+
         Telescope::tag(function (IncomingEntry $entry) {
             $tags = [];
-            
+
             if ($entry->type === 'request') {
                 if (str_contains($entry->content['uri'] ?? '', '/webhooks/scraper')) {
                     $tags[] = 'scraper';
@@ -48,11 +48,11 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
                     $tags[] = 'stations';
                 }
             }
-            
+
             if ($entry->type === 'job' && str_contains($entry->content['name'] ?? '', 'Scraper')) {
                 $tags[] = 'scraper';
             }
-            
+
             return $tags;
         });
     }

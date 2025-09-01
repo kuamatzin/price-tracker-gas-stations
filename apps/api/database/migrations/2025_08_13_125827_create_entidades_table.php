@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('nombre', 100);
             $table->string('codigo', 10)->nullable(); // State code like 'CDMX'
             $table->timestamps();
-            
+
             $table->index('codigo');
         });
     }

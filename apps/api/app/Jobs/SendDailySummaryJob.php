@@ -45,29 +45,30 @@ class SendDailySummaryJob implements ShouldQueue
     {
         try {
             $user = User::find($this->userId);
-            
-            if (!$user) {
+
+            if (! $user) {
                 Log::warning('User not found for daily summary', ['user_id' => $this->userId]);
+
                 return;
             }
-            
+
             $notificationService = app(NotificationService::class);
             $sent = $notificationService->sendDailySummary($user);
-            
-            if (!$sent) {
+
+            if (! $sent) {
                 Log::warning('Daily summary not sent', [
                     'user_id' => $this->userId,
-                    'reason' => 'Service returned false'
+                    'reason' => 'Service returned false',
                 ]);
             }
-            
+
         } catch (\Exception $e) {
             Log::error('Daily summary job failed', [
                 'user_id' => $this->userId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             // Re-throw to trigger retry
             throw $e;
         }
@@ -80,7 +81,7 @@ class SendDailySummaryJob implements ShouldQueue
     {
         Log::error('Daily summary job permanently failed', [
             'user_id' => $this->userId,
-            'error' => $exception->getMessage()
+            'error' => $exception->getMessage(),
         ]);
     }
 

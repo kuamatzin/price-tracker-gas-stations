@@ -2,8 +2,8 @@
 
 namespace App\Jobs;
 
-use App\Models\User;
 use App\Models\Station;
+use App\Models\User;
 use App\Services\Telegram\NotificationService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -58,38 +58,40 @@ class SendPriceAlertJob implements ShouldQueue
     {
         try {
             $user = User::find($this->userId);
-            
-            if (!$user) {
+
+            if (! $user) {
                 Log::warning('User not found for price alert', ['user_id' => $this->userId]);
+
                 return;
             }
-            
+
             $station = Station::find($this->stationId);
-            
-            if (!$station) {
+
+            if (! $station) {
                 Log::warning('Station not found for price alert', ['station_id' => $this->stationId]);
+
                 return;
             }
-            
+
             $notificationService = app(NotificationService::class);
             $sent = $notificationService->sendPriceAlert($user, $station, $this->priceChanges);
-            
-            if (!$sent) {
+
+            if (! $sent) {
                 Log::warning('Price alert not sent', [
                     'user_id' => $this->userId,
                     'station_id' => $this->stationId,
-                    'reason' => 'Service returned false'
+                    'reason' => 'Service returned false',
                 ]);
             }
-            
+
         } catch (\Exception $e) {
             Log::error('Price alert job failed', [
                 'user_id' => $this->userId,
                 'station_id' => $this->stationId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             // Re-throw to trigger retry
             throw $e;
         }
@@ -104,7 +106,7 @@ class SendPriceAlertJob implements ShouldQueue
             'user_id' => $this->userId,
             'station_id' => $this->stationId,
             'price_changes' => $this->priceChanges,
-            'error' => $exception->getMessage()
+            'error' => $exception->getMessage(),
         ]);
     }
 

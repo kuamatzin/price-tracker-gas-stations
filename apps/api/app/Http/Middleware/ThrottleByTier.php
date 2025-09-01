@@ -3,7 +3,6 @@
 namespace App\Http\Middleware;
 
 use Closure;
-use Illuminate\Cache\RateLimiter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter as RateLimiterFacade;
 use Symfony\Component\HttpFoundation\Response;
@@ -16,7 +15,7 @@ class ThrottleByTier
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!$request->user()) {
+        if (! $request->user()) {
             // For unauthenticated users, use default rate limit
             return $this->handleRateLimit($request, $next, 60, 10);
         }
@@ -68,7 +67,7 @@ class ThrottleByTier
 
         if (RateLimiterFacade::tooManyAttempts($key, $maxAttempts)) {
             $seconds = RateLimiterFacade::availableIn($key);
-            
+
             throw new TooManyRequestsHttpException(
                 $seconds,
                 sprintf('Has excedido el límite de %d solicitudes por hora. Por favor, intenta de nuevo en %d segundos.', $limit, $seconds)
@@ -93,9 +92,9 @@ class ThrottleByTier
     protected function resolveRequestKey(Request $request, ?string $userId = null): string
     {
         if ($userId) {
-            return 'throttle_tier:' . $userId;
+            return 'throttle_tier:'.$userId;
         }
 
-        return 'throttle_tier:' . sha1($request->ip());
+        return 'throttle_tier:'.sha1($request->ip());
     }
 }

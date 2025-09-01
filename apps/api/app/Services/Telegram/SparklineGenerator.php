@@ -7,8 +7,11 @@ use Illuminate\Support\Facades\Cache;
 class SparklineGenerator
 {
     private const SPARK_CHARS = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+
     private const TREND_UP = '↑';
+
     private const TREND_DOWN = '↓';
+
     private const TREND_STABLE = '→';
 
     /**
@@ -24,8 +27,8 @@ class SparklineGenerator
             return '';
         }
 
-        $cacheKey = 'sparkline:' . md5(json_encode($values) . $label);
-        
+        $cacheKey = 'sparkline:'.md5(json_encode($values).$label);
+
         return Cache::remember($cacheKey, 3600, function () use ($values, $label, $showTrend, $showChange) {
             $sparkline = $this->createSparkline($values);
             $trend = $showTrend ? $this->getTrendIndicator($values) : '';
@@ -35,7 +38,7 @@ class SparklineGenerator
                 $label ? "{$label}:" : '',
                 $sparkline,
                 $trend,
-                $change
+                $change,
             ]);
 
             return implode(' ', $parts);
@@ -50,7 +53,7 @@ class SparklineGenerator
         $result = [];
 
         foreach ($series as $label => $values) {
-            if (!empty($values)) {
+            if (! empty($values)) {
                 $result[$label] = $this->generate($values, $label, $showTrend);
             }
         }
@@ -65,7 +68,7 @@ class SparklineGenerator
     {
         // Validate and clean input values
         $values = $this->validateValues($values);
-        
+
         if (count($values) < 2) {
             return str_repeat(self::SPARK_CHARS[3], max(1, count($values)));
         }
@@ -124,7 +127,7 @@ class SparklineGenerator
         $changePercent = ($change / $first) * 100;
 
         $sign = $change >= 0 ? '+' : '';
-        
+
         return sprintf(
             '%s%.1f%% ($%.2f → $%.2f)',
             $sign,
@@ -154,7 +157,7 @@ class SparklineGenerator
 
             // Pad label to fixed width
             $paddedLabel = str_pad(ucfirst($label), 8);
-            
+
             // Create the full line
             $line = sprintf(
                 '%s %s %s %s',
@@ -181,7 +184,7 @@ class SparklineGenerator
 
         $first = reset($values);
         $last = end($values);
-        
+
         if ($first == 0) {
             return '0.0%';
         }
@@ -204,7 +207,7 @@ class SparklineGenerator
         return [
             $yourLabel => $this->generate($yourValues, $yourLabel),
             $competitorLabel => $this->generate($competitorValues, $competitorLabel),
-            'difference' => $this->generateDifferenceChart($yourValues, $competitorValues)
+            'difference' => $this->generateDifferenceChart($yourValues, $competitorValues),
         ];
     }
 
@@ -260,14 +263,14 @@ class SparklineGenerator
 
         return $this->createSparkline($values);
     }
-    
+
     /**
      * Validate and clean input values
      */
     private function validateValues(array $values): array
     {
-        return array_values(array_filter($values, function($value) {
-            return is_numeric($value) && !is_nan($value) && !is_infinite($value);
+        return array_values(array_filter($values, function ($value) {
+            return is_numeric($value) && ! is_nan($value) && ! is_infinite($value);
         }));
     }
 }

@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Api;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
 
 class ErrorHandlingTest extends TestCase
 {
@@ -32,8 +32,8 @@ class ErrorHandlingTest extends TestCase
                     'method',
                     'request_id',
                     'correlation_id',
-                ]
-            ]
+                ],
+            ],
         ]);
     }
 
@@ -58,8 +58,8 @@ class ErrorHandlingTest extends TestCase
                 'detail',
                 'hint',
                 'validation_errors',
-                'meta'
-            ]
+                'meta',
+            ],
         ]);
 
         $data = $response->json();
@@ -82,8 +82,8 @@ class ErrorHandlingTest extends TestCase
                 'status' => 401,
                 'code' => 'AUTHENTICATION_REQUIRED',
                 'title' => 'Authentication Required',
-                'hint' => 'Please provide a valid authentication token in the Authorization header.'
-            ]
+                'hint' => 'Please provide a valid authentication token in the Authorization header.',
+            ],
         ]);
     }
 
@@ -101,8 +101,8 @@ class ErrorHandlingTest extends TestCase
         $response->assertJson([
             'error' => [
                 'status' => 404,
-                'code' => 'RESOURCE_NOT_FOUND'
-            ]
+                'code' => 'RESOURCE_NOT_FOUND',
+            ],
         ]);
     }
 
@@ -121,8 +121,8 @@ class ErrorHandlingTest extends TestCase
             'error' => [
                 'status' => 405,
                 'code' => 'METHOD_NOT_ALLOWED',
-                'title' => 'Method Not Allowed'
-            ]
+                'title' => 'Method Not Allowed',
+            ],
         ]);
 
         $data = $response->json();
@@ -137,17 +137,17 @@ class ErrorHandlingTest extends TestCase
         $testCases = [
             [
                 'url' => '/api/v1/nonexistent',
-                'hint' => 'Check the API documentation for the correct endpoint URL and method.'
+                'hint' => 'Check the API documentation for the correct endpoint URL and method.',
             ],
             [
                 'url' => '/api/v1/prices/current',
                 'authenticated' => false,
-                'hint' => 'Please provide a valid authentication token in the Authorization header.'
+                'hint' => 'Please provide a valid authentication token in the Authorization header.',
             ],
         ];
 
         foreach ($testCases as $testCase) {
-            if (isset($testCase['authenticated']) && !$testCase['authenticated']) {
+            if (isset($testCase['authenticated']) && ! $testCase['authenticated']) {
                 // Test without authentication
             } else {
                 $user = User::factory()->create();
@@ -156,7 +156,7 @@ class ErrorHandlingTest extends TestCase
 
             $response = $this->get($testCase['url']);
             $data = $response->json();
-            
+
             $this->assertEquals($testCase['hint'], $data['error']['hint']);
         }
     }
@@ -167,9 +167,9 @@ class ErrorHandlingTest extends TestCase
     public function test_correlation_id_is_included_in_errors()
     {
         $correlationId = 'test-correlation-123';
-        
+
         $response = $this->withHeaders([
-            'X-Correlation-ID' => $correlationId
+            'X-Correlation-ID' => $correlationId,
         ])->get('/api/v1/nonexistent');
 
         $data = $response->json();
@@ -196,7 +196,7 @@ class ErrorHandlingTest extends TestCase
         config(['app.debug' => false]);
 
         $response = $this->get('/api/v1/will-cause-error');
-        
+
         $data = $response->json();
         $this->assertArrayNotHasKey('debug', $data['error'] ?? []);
     }
@@ -210,7 +210,7 @@ class ErrorHandlingTest extends TestCase
 
         // Force an error by calling non-existent endpoint
         $response = $this->get('/api/v1/nonexistent');
-        
+
         $data = $response->json();
         if ($response->status() === 500) {
             $this->assertArrayHasKey('debug', $data['error']);
@@ -229,7 +229,7 @@ class ErrorHandlingTest extends TestCase
         Sanctum::actingAs($user);
 
         // Simulate rate limit exceeded
-        $key = 'rate_limit:' . $user->id . ':' . now()->format('Y-m-d-H');
+        $key = 'rate_limit:'.$user->id.':'.now()->format('Y-m-d-H');
         \Redis::set($key, 101); // Exceed free tier limit
 
         // Next request should indicate rate limit exceeded
@@ -241,8 +241,8 @@ class ErrorHandlingTest extends TestCase
                     'status' => 429,
                     'code' => 'RATE_LIMIT_EXCEEDED',
                     'title' => 'Too Many Requests',
-                    'hint' => 'You have exceeded the rate limit. Please wait before making more requests.'
-                ]
+                    'hint' => 'You have exceeded the rate limit. Please wait before making more requests.',
+                ],
             ]);
         }
     }

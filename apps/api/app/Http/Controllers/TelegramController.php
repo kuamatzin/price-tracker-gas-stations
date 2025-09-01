@@ -2,21 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Telegram\Bot\Laravel\Facades\Telegram;
+use App\Services\Telegram\CallbackHandler;
 use App\Services\Telegram\MessageRouter;
 use App\Services\Telegram\SessionManager;
-use App\Services\Telegram\CallbackHandler;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Telegram\Bot\Laravel\Facades\Telegram;
 
 class TelegramController extends Controller
 {
     protected MessageRouter $router;
+
     protected SessionManager $sessionManager;
+
     protected CallbackHandler $callbackHandler;
 
     public function __construct(
-        MessageRouter $router, 
+        MessageRouter $router,
         SessionManager $sessionManager,
         CallbackHandler $callbackHandler
     ) {
@@ -33,11 +35,11 @@ class TelegramController extends Controller
         try {
             // Get the webhook update
             $update = Telegram::commandsHandler(true);
-            
+
             // Get chat ID and user info
             $message = $update->getMessage();
             $callbackQuery = $update->getCallbackQuery();
-            
+
             if ($message) {
                 $chatId = $message->getChat()->getId();
                 $userId = $message->getFrom()->getId();
@@ -64,10 +66,10 @@ class TelegramController extends Controller
 
             return response()->json(['ok' => true]);
         } catch (\Exception $e) {
-            Log::error('Telegram webhook error: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
+            Log::error('Telegram webhook error: '.$e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             return response()->json(['ok' => false], 500);
         }
     }
@@ -79,21 +81,21 @@ class TelegramController extends Controller
     {
         try {
             $url = config('telegram.bots.fuelintel.webhook_url');
-            
+
             $response = Telegram::setWebhook([
-                'url' => $url
+                'url' => $url,
             ]);
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Webhook set successfully',
-                'response' => $response
+                'response' => $response,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to set webhook',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -105,17 +107,17 @@ class TelegramController extends Controller
     {
         try {
             $response = Telegram::removeWebhook();
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Webhook removed successfully',
-                'response' => $response
+                'response' => $response,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to remove webhook',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -127,16 +129,16 @@ class TelegramController extends Controller
     {
         try {
             $response = Telegram::getWebhookInfo();
-            
+
             return response()->json([
                 'success' => true,
-                'info' => $response
+                'info' => $response,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to get webhook info',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }

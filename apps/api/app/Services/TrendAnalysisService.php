@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
-use App\Repositories\HistoricalDataRepository;
 use App\Models\Station;
-use Illuminate\Support\Facades\DB;
+use App\Repositories\HistoricalDataRepository;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class TrendAnalysisService
 {
@@ -20,27 +20,27 @@ class TrendAnalysisService
         int $periodDays = 7
     ): array {
         $station = Station::where('numero', $stationId)->first();
-        if (!$station) {
+        if (! $station) {
             return [
                 'station' => null,
                 'period' => ['start' => $startDate, 'end' => $endDate, 'days' => 0],
-                'trends' => []
+                'trends' => [],
             ];
         }
 
         $priceData = $this->getPriceDataForPeriod($stationId, $startDate, $endDate);
         $marketAvg = $this->getMarketAverage($station->municipio_id, $startDate, $endDate);
-        
+
         $trends = [];
         $fuelTypes = ['regular', 'premium', 'diesel'];
-        
+
         foreach ($fuelTypes as $fuelType) {
             $fuelPrices = $priceData->where('fuel_type', $fuelType);
-            
+
             if ($fuelPrices->isEmpty()) {
                 continue;
             }
-            
+
             $prices = $fuelPrices->pluck('price')->toArray();
             $trends[$fuelType] = $this->analyzeFuelTrend($prices, $fuelPrices, $marketAvg[$fuelType] ?? null);
         }
@@ -48,14 +48,14 @@ class TrendAnalysisService
         return [
             'station' => [
                 'numero' => $station->numero,
-                'nombre' => $station->nombre
+                'nombre' => $station->nombre,
             ],
             'period' => [
                 'start' => $startDate,
                 'end' => $endDate,
-                'days' => Carbon::parse($startDate)->diffInDays(Carbon::parse($endDate))
+                'days' => Carbon::parse($startDate)->diffInDays(Carbon::parse($endDate)),
             ],
-            'trends' => $trends
+            'trends' => $trends,
         ];
     }
 
@@ -63,7 +63,7 @@ class TrendAnalysisService
     {
         return DB::table('price_changes')
             ->where('station_numero', $stationId)
-            ->whereBetween('changed_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+            ->whereBetween('changed_at', [$startDate.' 00:00:00', $endDate.' 23:59:59'])
             ->orderBy('changed_at')
             ->get();
     }
@@ -77,11 +77,11 @@ class TrendAnalysisService
                 DB::raw('AVG(pc.price) as avg_price')
             )
             ->where('s.municipio_id', $municipioId)
-            ->whereBetween('pc.changed_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+            ->whereBetween('pc.changed_at', [$startDate.' 00:00:00', $endDate.' 23:59:59'])
             ->groupBy('pc.fuel_type')
             ->get()
             ->keyBy('fuel_type')
-            ->map(fn($item) => $item->avg_price)
+            ->map(fn ($item) => $item->avg_price)
             ->toArray();
 
         return $avgPrices;
@@ -91,21 +91,21 @@ class TrendAnalysisService
     {
         $currentPrice = end($prices);
         $avgPrice = array_sum($prices) / count($prices);
-        
+
         // Find min and max with dates
         $minData = $priceData->sortBy('price')->first();
         $maxData = $priceData->sortByDesc('price')->first();
-        
+
         // Calculate volatility (standard deviation)
         $volatility = $this->calculateVolatility($prices);
-        
+
         // Calculate trend direction
         $trendAnalysis = $this->calculateTrend($prices);
-        
+
         // Calculate percentage change
         $firstPrice = reset($prices);
         $changePercent = $firstPrice > 0 ? (($currentPrice - $firstPrice) / $firstPrice) * 100 : 0;
-        
+
         // Compare to market
         $vsMarket = null;
         if ($marketAvg !== null) {
@@ -114,7 +114,7 @@ class TrendAnalysisService
             $vsMarket = [
                 'difference' => round($difference, 2),
                 'percent' => round($percent, 2),
-                'position' => $difference > 0 ? 'above' : ($difference < 0 ? 'below' : 'equal')
+                'position' => $difference > 0 ? 'above' : ($difference < 0 ? 'below' : 'equal'),
             ];
         }
 
@@ -123,11 +123,11 @@ class TrendAnalysisService
             'avg' => round($avgPrice, 2),
             'min' => [
                 'price' => round($minData->price, 2),
-                'date' => Carbon::parse($minData->changed_at)->format('Y-m-d')
+                'date' => Carbon::parse($minData->changed_at)->format('Y-m-d'),
             ],
             'max' => [
                 'price' => round($maxData->price, 2),
-                'date' => Carbon::parse($maxData->changed_at)->format('Y-m-d')
+                'date' => Carbon::parse($maxData->changed_at)->format('Y-m-d'),
             ],
             'volatility' => round($volatility, 2),
             'trend' => $trendAnalysis['direction'],
@@ -136,7 +136,7 @@ class TrendAnalysisService
             'change_percent' => round($changePercent, 2),
             'vs_market' => $vsMarket,
             'moving_avg_7d' => $this->calculateMovingAverage($prices, 7),
-            'sample_size' => count($prices)
+            'sample_size' => count($prices),
         ];
     }
 
@@ -196,7 +196,7 @@ class TrendAnalysisService
         return [
             'direction' => $slope > 0.01 ? 'rising' : ($slope < -0.01 ? 'falling' : 'stable'),
             'slope' => round($slope, 4),
-            'confidence' => $r2
+            'confidence' => $r2,
         ];
     }
 
@@ -231,6 +231,7 @@ class TrendAnalysisService
         }
 
         $r2 = 1 - ($ssRes / $ssTot);
+
         // Ensure R² is between 0 and 1 (floating point errors can cause slight deviations)
         return max(0, min(1, round($r2, 4)));
     }
@@ -242,6 +243,7 @@ class TrendAnalysisService
         }
 
         $recentPrices = array_slice($prices, -$window);
+
         return round(array_sum($recentPrices) / count($recentPrices), 2);
     }
 
@@ -249,14 +251,14 @@ class TrendAnalysisService
     {
         // Analyze weekly patterns
         $weeklyPattern = $this->analyzeWeeklyPattern($historicalData);
-        
+
         // Analyze monthly patterns
         $monthlyPattern = $this->analyzeMonthlyPattern($historicalData);
-        
+
         return [
             'weekly' => $weeklyPattern,
             'monthly' => $monthlyPattern,
-            'has_pattern' => $weeklyPattern['significant'] || $monthlyPattern['significant']
+            'has_pattern' => $weeklyPattern['significant'] || $monthlyPattern['significant'],
         ];
     }
 
@@ -266,32 +268,32 @@ class TrendAnalysisService
             return [
                 'pattern' => [],
                 'variance' => 0,
-                'significant' => false
+                'significant' => false,
             ];
         }
 
         $dayAverages = [];
-        
+
         foreach ($data as $item) {
             if (isset($item['date']) && isset($item['price'])) {
                 $dayOfWeek = Carbon::parse($item['date'])->dayOfWeek;
                 $dayAverages[$dayOfWeek][] = $item['price'];
             }
         }
-        
+
         $pattern = [];
         foreach ($dayAverages as $day => $prices) {
-            if (!empty($prices)) {
+            if (! empty($prices)) {
                 $pattern[$day] = array_sum($prices) / count($prices);
             }
         }
-        
+
         $variance = count($pattern) > 1 ? $this->calculateVolatility(array_values($pattern)) : 0;
-        
+
         return [
             'pattern' => $pattern,
             'variance' => round($variance, 4),
-            'significant' => $variance > 0.5
+            'significant' => $variance > 0.5,
         ];
     }
 
@@ -301,32 +303,32 @@ class TrendAnalysisService
             return [
                 'pattern' => [],
                 'variance' => 0,
-                'significant' => false
+                'significant' => false,
             ];
         }
 
         $monthAverages = [];
-        
+
         foreach ($data as $item) {
             if (isset($item['date']) && isset($item['price'])) {
                 $month = Carbon::parse($item['date'])->month;
                 $monthAverages[$month][] = $item['price'];
             }
         }
-        
+
         $pattern = [];
         foreach ($monthAverages as $month => $prices) {
-            if (!empty($prices)) {
+            if (! empty($prices)) {
                 $pattern[$month] = array_sum($prices) / count($prices);
             }
         }
-        
+
         $variance = count($pattern) > 1 ? $this->calculateVolatility(array_values($pattern)) : 0;
-        
+
         return [
             'pattern' => $pattern,
             'variance' => round($variance, 4),
-            'significant' => $variance > 1.0
+            'significant' => $variance > 1.0,
         ];
     }
 }

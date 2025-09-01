@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Generate Recommendations Job
- * 
+ *
  * Background job for generating AI-powered pricing recommendations
  * based on market analytics and competitive positioning.
  */
@@ -25,8 +25,9 @@ class GenerateRecommendationsJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $tries;
+
     public $backoff;
-    
+
     private string $stationNumero;
 
     /**
@@ -50,15 +51,16 @@ class GenerateRecommendationsJob implements ShouldQueue
     ): void {
         try {
             Log::info('GenerateRecommendationsJob started', [
-                'station_numero' => $this->stationNumero
+                'station_numero' => $this->stationNumero,
             ]);
 
             $station = \App\Models\Station::where('numero', $this->stationNumero)->first();
-            
-            if (!$station) {
+
+            if (! $station) {
                 Log::warning('Station not found for recommendation generation', [
-                    'station_numero' => $this->stationNumero
+                    'station_numero' => $this->stationNumero,
                 ]);
+
                 return;
             }
 
@@ -79,16 +81,16 @@ class GenerateRecommendationsJob implements ShouldQueue
 
             Log::info('Recommendation generated and cached', [
                 'station_numero' => $this->stationNumero,
-                'ai_generated' => $recommendation['ai_generated'] ?? false
+                'ai_generated' => $recommendation['ai_generated'] ?? false,
             ]);
 
         } catch (\Exception $e) {
             Log::error('GenerateRecommendationsJob failed', [
                 'station_numero' => $this->stationNumero,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             throw $e; // Re-throw for retry mechanism
         }
     }
@@ -103,7 +105,7 @@ class GenerateRecommendationsJob implements ShouldQueue
     ): array {
         // Get current prices
         $currentPrices = $pricingService->getCurrentStationPrices($station->numero);
-        
+
         $prices = [];
         foreach ($currentPrices as $price) {
             $prices[$price->fuel_type] = $price->price;
@@ -112,7 +114,7 @@ class GenerateRecommendationsJob implements ShouldQueue
         // Get trends
         $defaultRadius = Config::get('analytics.radius.default');
         $shortPeriod = Config::get('analytics.time_periods.short');
-        
+
         $trends = $analyticsService->getPriceTrends(
             $station->numero,
             $shortPeriod,
@@ -136,9 +138,9 @@ class GenerateRecommendationsJob implements ShouldQueue
         // Calculate market averages
         $marketAverage = [];
         $fuelTypes = Config::get('analytics.fuel_types');
-        
+
         foreach ($fuelTypes as $fuelType) {
-            $fuelPrices = $competitors->pluck($fuelType . '_price')->filter()->values();
+            $fuelPrices = $competitors->pluck($fuelType.'_price')->filter()->values();
             if ($fuelPrices->isNotEmpty()) {
                 $marketAverage[$fuelType] = round($fuelPrices->avg(), 2);
             }
@@ -152,18 +154,18 @@ class GenerateRecommendationsJob implements ShouldQueue
             'current_prices' => $prices,
             'market_average' => $marketAverage,
             'trend' => $overallTrend,
-            'ranking' => !empty($ranking['rankings']) ? array_map(function($r) {
+            'ranking' => ! empty($ranking['rankings']) ? array_map(function ($r) {
                 return [
                     'position' => $r['position'],
-                    'total' => $r['total_competitors']
+                    'total' => $r['total_competitors'],
                 ];
             }, $ranking['rankings']) : [],
             'competitor_count' => $competitors->count(),
             'station_info' => [
                 'nombre' => $station->nombre,
                 'brand' => $station->brand,
-                'municipio_id' => $station->municipio_id
-            ]
+                'municipio_id' => $station->municipio_id,
+            ],
         ];
     }
 
@@ -178,7 +180,7 @@ class GenerateRecommendationsJob implements ShouldQueue
 
         $risingCount = 0;
         $fallingCount = 0;
-        
+
         foreach ($trends['trends'] as $fuel => $data) {
             if ($data['trend_direction'] === 'rising') {
                 $risingCount++;
@@ -186,13 +188,13 @@ class GenerateRecommendationsJob implements ShouldQueue
                 $fallingCount++;
             }
         }
-        
+
         if ($risingCount > $fallingCount) {
             return 'alcista';
         } elseif ($fallingCount > $risingCount) {
             return 'bajista';
         }
-        
+
         return 'estable';
     }
 
@@ -203,7 +205,7 @@ class GenerateRecommendationsJob implements ShouldQueue
     {
         Log::error('GenerateRecommendationsJob permanently failed', [
             'station_numero' => $this->stationNumero,
-            'error' => $exception->getMessage()
+            'error' => $exception->getMessage(),
         ]);
 
         // Cache a fallback recommendation
@@ -213,12 +215,12 @@ class GenerateRecommendationsJob implements ShouldQueue
             'suggested_actions' => [
                 'Revisar precios de competidores manualmente',
                 'Monitorear tendencias del mercado',
-                'Ajustar precios según demanda local'
+                'Ajustar precios según demanda local',
             ],
             'risk_level' => 'medium',
             'confidence' => 0.3,
             'reasoning' => 'Recomendación basada en mejores prácticas (sistema AI no disponible)',
-            'ai_generated' => false
+            'ai_generated' => false,
         ], 900); // 15 minutes for fallback
     }
 }

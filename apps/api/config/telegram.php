@@ -199,4 +199,84 @@ return [
         // 'stop' => Acme\Project\Commands\StopCommand::class,
         // 'status' => Acme\Project\Commands\StatusCommand::class,
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Performance & Error Handling Configuration
+    |--------------------------------------------------------------------------
+    */
+    'max_concurrent_conversations' => env('TELEGRAM_MAX_CONCURRENT_CONVERSATIONS', 100),
+    'rate_limit_per_user' => env('TELEGRAM_RATE_LIMIT_PER_USER', 30),
+    'rate_limit_global' => env('TELEGRAM_RATE_LIMIT_GLOBAL', 1000),
+    'session_compression' => env('TELEGRAM_SESSION_COMPRESSION', true),
+    'admin_chat_ids' => array_filter(explode(',', env('TELEGRAM_ADMIN_CHAT_IDS', ''))),
+    'health_check_interval' => env('TELEGRAM_HEALTH_CHECK_INTERVAL', 60),
+    'metrics_enabled' => env('TELEGRAM_METRICS_ENABLED', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Circuit Breaker Configuration
+    |--------------------------------------------------------------------------
+    */
+    'circuit_breaker' => [
+        'deepseek' => [
+            'failure_threshold' => env('CIRCUIT_BREAKER_DEEPSEEK_FAILURE_THRESHOLD', 5),
+            'cooldown_ms' => env('CIRCUIT_BREAKER_DEEPSEEK_COOLDOWN_MS', 60000),
+            'success_threshold' => env('CIRCUIT_BREAKER_DEEPSEEK_SUCCESS_THRESHOLD', 3),
+        ],
+        'laravel_api' => [
+            'failure_threshold' => env('CIRCUIT_BREAKER_LARAVEL_API_FAILURE_THRESHOLD', 3),
+            'cooldown_ms' => env('CIRCUIT_BREAKER_LARAVEL_API_COOLDOWN_MS', 30000),
+            'success_threshold' => env('CIRCUIT_BREAKER_LARAVEL_API_SUCCESS_THRESHOLD', 2),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Timeout Configuration (milliseconds)
+    |--------------------------------------------------------------------------
+    */
+    'timeouts' => [
+        'deepseek_api' => env('TIMEOUT_DEEPSEEK_API', 2000),
+        'price_query' => env('TIMEOUT_PRICE_QUERY', 3000),
+        'analytics' => env('TIMEOUT_ANALYTICS', 5000),
+        'webhook' => env('TIMEOUT_WEBHOOK', 30000),
+        'default' => env('TIMEOUT_DEFAULT', 10000),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Error Messages in Spanish
+    |--------------------------------------------------------------------------
+    */
+    'error_messages' => [
+        'timeout' => '⏱️ La operación tardó demasiado. Por favor, intenta de nuevo en unos momentos.',
+        'rate_limit' => '🚦 Has alcanzado el límite de solicitudes. Intenta de nuevo en {minutes} minutos.',
+        'service_unavailable' => '🔧 El servicio está temporalmente no disponible. Estamos trabajando para solucionarlo.',
+        'invalid_input' => '❓ No entendí tu solicitud. Usa /help para ver los comandos disponibles.',
+        'circuit_open' => '⚡ Servicio en mantenimiento. Por favor, intenta más tarde.',
+        'session_expired' => '⏰ Tu sesión ha expirado. Por favor, inicia de nuevo con /start.',
+        'unauthorized' => '❌ No autorizado',
+        'general_error' => '❌ Ocurrió un error al procesar tu mensaje. Por favor, intenta de nuevo o contacta a soporte con /help.',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Degradation Configuration
+    |--------------------------------------------------------------------------
+    */
+    'degradation_levels' => [
+        'healthy' => [
+            'all_features' => true,
+        ],
+        'degraded' => [
+            'disable_nlp' => true,
+            'disable_analytics' => true,
+            'slow_mode' => true,
+        ],
+        'unhealthy' => [
+            'read_only' => true,
+            'emergency_responses' => true,
+        ],
+    ],
 ];

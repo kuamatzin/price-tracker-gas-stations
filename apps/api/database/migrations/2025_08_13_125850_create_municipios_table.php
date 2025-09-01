@@ -16,7 +16,7 @@ return new class extends Migration
             $table->integer('entidad_id');
             $table->string('nombre', 150);
             $table->timestamps();
-            
+
             $table->foreign('entidad_id')->references('id')->on('entidades')->onDelete('cascade');
             $table->index('entidad_id', 'idx_entidad');
         });

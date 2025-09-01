@@ -2,14 +2,14 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
-use App\Services\Telegram\CommandRegistry;
-use App\Services\Telegram\CommandParser;
-use App\Services\Telegram\SessionManager;
-use App\Services\Telegram\MessageRouter;
-use App\Services\Telegram\CallbackHandler;
-use App\Services\Telegram\TranslationService;
 use App\Exceptions\Telegram\BotExceptionHandler;
+use App\Services\Telegram\CallbackHandler;
+use App\Services\Telegram\CommandParser;
+use App\Services\Telegram\CommandRegistry;
+use App\Services\Telegram\MessageRouter;
+use App\Services\Telegram\SessionManager;
+use App\Services\Telegram\TranslationService;
+use Illuminate\Support\ServiceProvider;
 
 class TelegramServiceProvider extends ServiceProvider
 {
@@ -22,11 +22,11 @@ class TelegramServiceProvider extends ServiceProvider
         $this->app->singleton(SessionManager::class);
         $this->app->singleton(TranslationService::class);
         $this->app->singleton(CommandParser::class);
-        
+
         // Register command registry and populate it
         $this->app->singleton(CommandRegistry::class, function ($app) {
-            $registry = new CommandRegistry();
-            
+            $registry = new CommandRegistry;
+
             // Register all commands
             $registry->registerMany([
                 'start' => \App\Telegram\Commands\StartCommand::class,
@@ -44,16 +44,16 @@ class TelegramServiceProvider extends ServiceProvider
                 // 'silencio' => \App\Telegram\Commands\SilencioCommand::class,
                 // 'idioma' => \App\Telegram\Commands\IdiomaCommand::class,
             ]);
-            
+
             return $registry;
         });
-        
+
         // Register callback handler
         $this->app->singleton(CallbackHandler::class);
-        
+
         // Register message router
         $this->app->singleton(MessageRouter::class);
-        
+
         // Register exception handler
         $this->app->singleton(BotExceptionHandler::class);
     }
@@ -74,10 +74,10 @@ class TelegramServiceProvider extends ServiceProvider
     {
         $registry = $this->app->make(CommandRegistry::class);
         $commands = $registry->all()->values()->toArray();
-        
+
         // Update config
         config([
-            'telegram.bots.fuelintel.commands' => $commands
+            'telegram.bots.fuelintel.commands' => $commands,
         ]);
     }
 }

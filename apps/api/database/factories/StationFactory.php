@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
-use App\Models\Station;
 use App\Models\Entidad;
 use App\Models\Municipio;
+use App\Models\Station;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 class StationFactory extends Factory
 {
     protected $model = Station::class;
-    
+
     /**
      * Define the model's default state.
      *

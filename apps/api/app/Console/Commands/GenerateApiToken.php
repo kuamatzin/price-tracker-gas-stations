@@ -56,12 +56,12 @@ class GenerateApiToken extends Command
 
         $this->info('API Token created successfully!');
         $this->newLine();
-        $this->line('Token Name: ' . $name);
-        $this->line('Token ID: ' . $apiToken->id);
-        $this->line('Abilities: ' . implode(', ', $abilities));
-        
+        $this->line('Token Name: '.$name);
+        $this->line('Token ID: '.$apiToken->id);
+        $this->line('Abilities: '.implode(', ', $abilities));
+
         if ($apiToken->expires_at) {
-            $this->line('Expires: ' . $apiToken->expires_at->format('Y-m-d H:i:s'));
+            $this->line('Expires: '.$apiToken->expires_at->format('Y-m-d H:i:s'));
         } else {
             $this->line('Expires: Never');
         }
@@ -73,7 +73,7 @@ class GenerateApiToken extends Command
 
         if ($name === 'scraper-service') {
             $this->info('Add this to your scraper .env file:');
-            $this->line('API_TOKEN=' . $plainToken);
+            $this->line('API_TOKEN='.$plainToken);
         }
 
         return Command::SUCCESS;

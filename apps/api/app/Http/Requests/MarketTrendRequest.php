@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
 use Carbon\Carbon;
+use Illuminate\Foundation\Http\FormRequest;
 
 class MarketTrendRequest extends FormRequest
 {
@@ -38,12 +38,12 @@ class MarketTrendRequest extends FormRequest
             if ($this->start_date && $this->end_date) {
                 $start = Carbon::parse($this->start_date);
                 $end = Carbon::parse($this->end_date);
-                
+
                 // Max 365 days for market trends
                 if ($start->diffInDays($end) > 365) {
                     $validator->errors()->add('date_range', 'Date range cannot exceed 365 days for market trend analysis.');
                 }
-                
+
                 // Hourly grouping max 7 days
                 if ($this->grouping === 'hourly' && $start->diffInDays($end) > 7) {
                     $validator->errors()->add('grouping', 'Hourly grouping is limited to 7 days.');

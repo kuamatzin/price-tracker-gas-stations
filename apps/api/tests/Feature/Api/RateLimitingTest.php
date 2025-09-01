@@ -2,11 +2,11 @@
 
 namespace Tests\Feature\Api;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Models\User;
-use Laravel\Sanctum\Sanctum;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Redis;
+use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
 
 class RateLimitingTest extends TestCase
 {
@@ -49,12 +49,12 @@ class RateLimitingTest extends TestCase
 
         foreach ($tiers as $tier => $limit) {
             Redis::flushall();
-            
+
             $user = User::factory()->create(['subscription_tier' => $tier]);
             Sanctum::actingAs($user);
 
             $response = $this->get('/api/v1/prices/current');
-            
+
             $response->assertHeader('X-RateLimit-Limit', $limit);
             $response->assertHeader('X-RateLimit-Tier', $tier);
         }
@@ -73,7 +73,7 @@ class RateLimitingTest extends TestCase
         $remaining1 = (int) $response1->headers->get('X-RateLimit-Remaining');
 
         // Simulate usage increment
-        $key = 'rate_limit:' . $user->id . ':' . now()->format('Y-m-d-H');
+        $key = 'rate_limit:'.$user->id.':'.now()->format('Y-m-d-H');
         Redis::incr($key);
 
         // Second request
@@ -92,7 +92,7 @@ class RateLimitingTest extends TestCase
         Sanctum::actingAs($user);
 
         // Simulate rate limit exceeded
-        $key = 'rate_limit:' . $user->id . ':' . now()->format('Y-m-d-H');
+        $key = 'rate_limit:'.$user->id.':'.now()->format('Y-m-d-H');
         Redis::set($key, 100); // Max for free tier
 
         $response = $this->get('/api/v1/prices/current');
@@ -110,7 +110,7 @@ class RateLimitingTest extends TestCase
         Sanctum::actingAs($user);
 
         // Set high usage for current hour
-        $currentKey = 'rate_limit:' . $user->id . ':' . now()->format('Y-m-d-H');
+        $currentKey = 'rate_limit:'.$user->id.':'.now()->format('Y-m-d-H');
         Redis::set($currentKey, 99);
 
         $response1 = $this->get('/api/v1/prices/current');
@@ -135,11 +135,11 @@ class RateLimitingTest extends TestCase
         Sanctum::actingAs($user);
 
         // Set 50% usage
-        $key = 'rate_limit:' . $user->id . ':' . now()->format('Y-m-d-H');
+        $key = 'rate_limit:'.$user->id.':'.now()->format('Y-m-d-H');
         Redis::set($key, 50);
 
         $response = $this->get('/api/v1/prices/current');
-        
+
         $usage = $response->headers->get('X-RateLimit-Usage');
         $this->assertEquals('50%', $usage);
     }
@@ -161,7 +161,7 @@ class RateLimitingTest extends TestCase
 
         foreach ($endpoints as $endpoint) {
             $response = $this->get($endpoint);
-            
+
             $response->assertHeader('X-RateLimit-Limit');
             $response->assertHeader('X-RateLimit-Remaining');
         }

@@ -13,7 +13,7 @@ class EnsureEmailIsVerified
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user() && !$request->user()->hasVerifiedEmail()) {
+        if ($request->user() && ! $request->user()->hasVerifiedEmail()) {
             return response()->json([
                 'message' => 'Por favor verifica tu correo electrónico antes de continuar.',
                 'email_verified' => false,

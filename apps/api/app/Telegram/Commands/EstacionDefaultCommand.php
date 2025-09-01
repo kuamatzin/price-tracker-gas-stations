@@ -8,8 +8,9 @@ use Telegram\Bot\Commands\Command;
 class EstacionDefaultCommand extends Command
 {
     protected string $name = 'estacion_default';
+
     protected string $description = 'Establecer tu estación predeterminada';
-    
+
     private PricingService $pricingService;
 
     public function __construct(PricingService $pricingService)
@@ -25,6 +26,7 @@ class EstacionDefaultCommand extends Command
 
         if (empty($alias)) {
             $this->showAvailableStations($userId);
+
             return;
         }
 
@@ -33,20 +35,22 @@ class EstacionDefaultCommand extends Command
 
             if ($userStations->isEmpty()) {
                 $this->replyWithMessage([
-                    'text' => "❌ No tienes estaciones registradas.\n\nUsa /registrar para agregar tu primera estación."
+                    'text' => "❌ No tienes estaciones registradas.\n\nUsa /registrar para agregar tu primera estación.",
                 ]);
+
                 return;
             }
 
             // Find station by alias
             $station = $userStations->firstWhere('alias', $alias);
 
-            if (!$station) {
+            if (! $station) {
                 $this->replyWithMessage([
-                    'text' => "❌ No encontré la estación '{$alias}'.\n\n" .
-                             "Tus estaciones disponibles:\n" . 
-                             $this->formatStationList($userStations)
+                    'text' => "❌ No encontré la estación '{$alias}'.\n\n".
+                             "Tus estaciones disponibles:\n".
+                             $this->formatStationList($userStations),
                 ]);
+
                 return;
             }
 
@@ -60,22 +64,22 @@ class EstacionDefaultCommand extends Command
             $response .= "📍 Alias: _{$station->alias}_\n";
             $response .= "🏪 Nombre: {$station->nombre}\n";
             $response .= "📌 Dirección: {$station->direccion}\n\n";
-            $response .= "Ahora puedes usar `/precios` sin especificar estación.";
+            $response .= 'Ahora puedes usar `/precios` sin especificar estación.';
 
             $this->replyWithMessage([
                 'text' => $response,
-                'parse_mode' => 'Markdown'
+                'parse_mode' => 'Markdown',
             ]);
 
         } catch (\Exception $e) {
             \Log::error('EstacionDefaultCommand error', [
                 'chat_id' => $chatId,
                 'alias' => $alias,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             $this->replyWithMessage([
-                'text' => "❌ Ocurrió un error al establecer la estación predeterminada."
+                'text' => '❌ Ocurrió un error al establecer la estación predeterminada.',
             ]);
         }
     }
@@ -87,19 +91,20 @@ class EstacionDefaultCommand extends Command
 
             if ($userStations->isEmpty()) {
                 $this->replyWithMessage([
-                    'text' => "❌ No tienes estaciones registradas.\n\nUsa /registrar para agregar tu primera estación."
+                    'text' => "❌ No tienes estaciones registradas.\n\nUsa /registrar para agregar tu primera estación.",
                 ]);
+
                 return;
             }
 
             $currentDefault = $userStations->firstWhere('is_default', true);
-            
+
             $response = "📍 **Establecer Estación Predeterminada**\n\n";
-            
+
             if ($currentDefault) {
                 $response .= "Actual: _{$currentDefault->alias}_\n\n";
             }
-            
+
             $response .= "Usa el comando con el alias de la estación:\n";
             $response .= "`/estacion_default [alias]`\n\n";
             $response .= "**Tus estaciones:**\n";
@@ -107,28 +112,29 @@ class EstacionDefaultCommand extends Command
 
             $this->replyWithMessage([
                 'text' => $response,
-                'parse_mode' => 'Markdown'
+                'parse_mode' => 'Markdown',
             ]);
 
         } catch (\Exception $e) {
             \Log::error('EstacionDefaultCommand showAvailableStations error', [
                 'user_id' => $userId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             $this->replyWithMessage([
-                'text' => "❌ Ocurrió un error al consultar tus estaciones."
+                'text' => '❌ Ocurrió un error al consultar tus estaciones.',
             ]);
         }
     }
 
     private function formatStationList($stations): string
     {
-        $list = "";
+        $list = '';
         foreach ($stations as $station) {
-            $default = $station->is_default ? " ⭐" : "";
+            $default = $station->is_default ? ' ⭐' : '';
             $list .= "• `{$station->alias}` - {$station->nombre}{$default}\n";
         }
+
         return $list;
     }
 
@@ -145,7 +151,7 @@ class EstacionDefaultCommand extends Command
             ->where('user_id', $userId)
             ->update([
                 'is_default' => true,
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
 
         // Update user table default_station_alias
@@ -162,11 +168,11 @@ class EstacionDefaultCommand extends Command
     private function getUserId(int $chatId): int
     {
         $user = \App\Models\User::where('telegram_chat_id', $chatId)->first();
-        
-        if (!$user) {
+
+        if (! $user) {
             throw new \Exception('Usuario no registrado');
         }
-        
+
         return $user->id;
     }
 }

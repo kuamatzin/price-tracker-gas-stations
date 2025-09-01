@@ -2,18 +2,21 @@
 
 namespace App\Telegram\Commands;
 
+use App\Services\Telegram\InlineKeyboardBuilder;
 use App\Services\Telegram\PricingService;
 use App\Services\Telegram\TableFormatter;
-use App\Services\Telegram\InlineKeyboardBuilder;
 use Telegram\Bot\Commands\Command;
 
 class PreciosCompetenciaCommand extends Command
 {
     protected string $name = 'precios_competencia';
+
     protected string $description = 'Ver precios de competidores cercanos';
-    
+
     private PricingService $pricingService;
+
     private TableFormatter $formatter;
+
     private InlineKeyboardBuilder $keyboardBuilder;
 
     public function __construct(
@@ -36,8 +39,9 @@ class PreciosCompetenciaCommand extends Command
 
             if ($userStations->isEmpty()) {
                 $this->replyWithMessage([
-                    'text' => "❌ No tienes estaciones registradas.\n\nUsa /registrar para agregar tu primera estación."
+                    'text' => "❌ No tienes estaciones registradas.\n\nUsa /registrar para agregar tu primera estación.",
                 ]);
+
                 return;
             }
 
@@ -45,12 +49,13 @@ class PreciosCompetenciaCommand extends Command
             if ($userStations->count() > 1) {
                 // Store command context in session for callback handling
                 cache()->put("telegram:session:{$chatId}:pending_command", 'precios_competencia', 300);
-                
+
                 $keyboard = $this->keyboardBuilder->buildStationSelection($userStations, 'precios_competencia');
                 $this->replyWithMessage([
-                    'text' => "📍 Selecciona una estación para ver competidores:",
-                    'reply_markup' => $keyboard
+                    'text' => '📍 Selecciona una estación para ver competidores:',
+                    'reply_markup' => $keyboard,
                 ]);
+
                 return;
             }
 
@@ -61,11 +66,11 @@ class PreciosCompetenciaCommand extends Command
         } catch (\Exception $e) {
             \Log::error('PreciosCompetenciaCommand error', [
                 'chat_id' => $chatId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             $this->replyWithMessage([
-                'text' => "❌ Ocurrió un error al consultar los competidores. Por favor intenta más tarde."
+                'text' => '❌ Ocurrió un error al consultar los competidores. Por favor intenta más tarde.',
             ]);
         }
     }
@@ -85,8 +90,9 @@ class PreciosCompetenciaCommand extends Command
 
         if ($nearbyStations->isEmpty()) {
             $this->replyWithMessage([
-                'text' => "❌ No se encontraron competidores en un radio de {$radius}km."
+                'text' => "❌ No se encontraron competidores en un radio de {$radius}km.",
             ]);
+
             return;
         }
 
@@ -102,12 +108,12 @@ class PreciosCompetenciaCommand extends Command
         foreach ($nearbyStations->take(10) as $competitor) {
             $name = substr($competitor->nombre, 0, 16);
             $name = str_pad($name, 16);
-            $dist = sprintf("%3.1f", $competitor->distance);
-            
-            $regular = $competitor->regular_price ? sprintf("$%.2f", $competitor->regular_price) : "---";
-            $premium = $competitor->premium_price ? sprintf("$%.2f", $competitor->premium_price) : "---";
-            $diesel = $competitor->diesel_price ? sprintf("$%.2f", $competitor->diesel_price) : "---";
-            
+            $dist = sprintf('%3.1f', $competitor->distance);
+
+            $regular = $competitor->regular_price ? sprintf('$%.2f', $competitor->regular_price) : '---';
+            $premium = $competitor->premium_price ? sprintf('$%.2f', $competitor->premium_price) : '---';
+            $diesel = $competitor->diesel_price ? sprintf('$%.2f', $competitor->diesel_price) : '---';
+
             $response .= sprintf(
                 "%s %skm %8s %7s %7s\n",
                 $name,
@@ -126,18 +132,18 @@ class PreciosCompetenciaCommand extends Command
 
         $this->replyWithMessage([
             'text' => $response,
-            'parse_mode' => 'Markdown'
+            'parse_mode' => 'Markdown',
         ]);
     }
 
     private function getUserId(int $chatId): int
     {
         $user = \App\Models\User::where('telegram_chat_id', $chatId)->first();
-        
-        if (!$user) {
+
+        if (! $user) {
             throw new \Exception('Usuario no registrado');
         }
-        
+
         return $user->id;
     }
 }

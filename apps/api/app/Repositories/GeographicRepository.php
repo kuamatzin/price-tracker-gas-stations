@@ -2,8 +2,8 @@
 
 namespace App\Repositories;
 
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class GeographicRepository
 {
@@ -13,7 +13,7 @@ class GeographicRepository
     private function getLatestPricesSubquery()
     {
         $twentyFourHoursAgo = Carbon::now()->subHours(24);
-        
+
         return DB::table('price_changes as pc1')
             ->select('pc1.station_numero', 'pc1.fuel_type', 'pc1.price', 'pc1.changed_at')
             ->whereRaw('pc1.changed_at = (
@@ -54,7 +54,7 @@ class GeographicRepository
             ')
             ->groupBy('e.id', 'e.nombre', 'e.codigo', 'pc.fuel_type');
 
-        if (!empty($filters['fuel_type'])) {
+        if (! empty($filters['fuel_type'])) {
             $query->where('pc.fuel_type', $filters['fuel_type']);
         }
 
@@ -69,13 +69,13 @@ class GeographicRepository
         $nationalTotals = ['regular' => [], 'premium' => [], 'diesel' => []];
 
         foreach ($results as $row) {
-            if (!isset($estados[$row->estado_id])) {
+            if (! isset($estados[$row->estado_id])) {
                 $estados[$row->estado_id] = [
                     'estado_id' => $row->estado_id,
                     'estado_nombre' => $row->estado_nombre,
                     'estado_codigo' => $row->estado_codigo,
                     'fuel_prices' => [],
-                    'total_stations' => 0
+                    'total_stations' => 0,
                 ];
             }
 
@@ -89,7 +89,7 @@ class GeographicRepository
                 'median' => $stats['median'],
                 'stddev' => $stats['stddev'],
                 'spread' => round($row->max_price - $row->min_price, 2),
-                'station_count' => $row->station_count
+                'station_count' => $row->station_count,
             ];
 
             $estados[$row->estado_id]['total_stations'] = max(
@@ -120,8 +120,8 @@ class GeographicRepository
 
         $cheapestEstado = '';
         $mostExpensiveEstado = '';
-        
-        if (!empty($regularPrices)) {
+
+        if (! empty($regularPrices)) {
             asort($regularPrices);
             $cheapestEstado = array_key_first($regularPrices);
             $mostExpensiveEstado = array_key_last($regularPrices);
@@ -140,10 +140,11 @@ class GeographicRepository
         usort($estados, function ($a, $b) use ($sortBy, $sortOrder) {
             $aVal = $a[$sortBy] ?? $a['estado_nombre'];
             $bVal = $b[$sortBy] ?? $b['estado_nombre'];
-            
+
             if ($sortOrder === 'desc') {
                 return $bVal <=> $aVal;
             }
+
             return $aVal <=> $bVal;
         });
 
@@ -153,8 +154,8 @@ class GeographicRepository
                 'total_estados' => count($estados),
                 'national_average' => $nationalAverage,
                 'cheapest_estado' => $cheapestEstado,
-                'most_expensive_estado' => $mostExpensiveEstado
-            ]
+                'most_expensive_estado' => $mostExpensiveEstado,
+            ],
         ];
     }
 
@@ -162,8 +163,8 @@ class GeographicRepository
     {
         // First validate estado exists
         $estado = DB::table('entidades')->where('id', $estadoId)->first();
-        
-        if (!$estado) {
+
+        if (! $estado) {
             return null;
         }
 
@@ -188,24 +189,24 @@ class GeographicRepository
             ')
             ->groupBy('m.id', 'm.nombre', 'pc.fuel_type');
 
-        if (!empty($filters['fuel_type'])) {
+        if (! empty($filters['fuel_type'])) {
             $query->where('pc.fuel_type', $filters['fuel_type']);
         }
 
         $total = DB::table('municipios')->where('entidad_id', $estadoId)->count();
-        
+
         $results = $query->get();
 
         // Process results
         $municipios = [];
         foreach ($results as $row) {
-            if (!isset($municipios[$row->municipio_id])) {
+            if (! isset($municipios[$row->municipio_id])) {
                 $municipios[$row->municipio_id] = [
                     'municipio_id' => $row->municipio_id,
                     'municipio_nombre' => $row->municipio_nombre,
                     'fuel_prices' => [],
                     'station_count' => 0,
-                    'station_density' => 0
+                    'station_density' => 0,
                 ];
             }
 
@@ -233,7 +234,7 @@ class GeographicRepository
                 'min' => $row->min_price,
                 'max' => $row->max_price,
                 'stddev' => $stddev,
-                'spread' => round($row->max_price - $row->min_price, 2)
+                'spread' => round($row->max_price - $row->min_price, 2),
             ];
 
             $municipios[$row->municipio_id]['station_count'] = max(
@@ -246,9 +247,9 @@ class GeographicRepository
                 ->where('municipio_id', $row->municipio_id)
                 ->where('is_active', true)
                 ->count();
-            
-            $municipios[$row->municipio_id]['station_density'] = $totalStations > 0 
-                ? round($row->station_count / $totalStations, 2) 
+
+            $municipios[$row->municipio_id]['station_density'] = $totalStations > 0
+                ? round($row->station_count / $totalStations, 2)
                 : 0;
         }
 
@@ -264,10 +265,11 @@ class GeographicRepository
         usort($municipios, function ($a, $b) use ($sortBy, $sortOrder) {
             $aVal = $a[$sortBy] ?? $a['municipio_nombre'];
             $bVal = $b[$sortBy] ?? $b['municipio_nombre'];
-            
+
             if ($sortOrder === 'desc') {
                 return $bVal <=> $aVal;
             }
+
             return $aVal <=> $bVal;
         });
 
@@ -282,13 +284,13 @@ class GeographicRepository
                 'current_page' => (int) $page,
                 'last_page' => (int) ceil(count($municipios) / $perPage),
                 'from' => $offset + 1,
-                'to' => min($offset + $perPage, count($municipios))
+                'to' => min($offset + $perPage, count($municipios)),
             ],
             'estado' => [
                 'id' => $estado->id,
                 'nombre' => $estado->nombre,
-                'codigo' => $estado->codigo
-            ]
+                'codigo' => $estado->codigo,
+            ],
         ];
     }
 
@@ -301,7 +303,7 @@ class GeographicRepository
             ->select('m.*', 'e.nombre as estado_nombre')
             ->first();
 
-        if (!$municipio) {
+        if (! $municipio) {
             return null;
         }
 
@@ -309,7 +311,7 @@ class GeographicRepository
         $fuelTypes = ['regular', 'premium', 'diesel'];
 
         $twentyFourHoursAgo = Carbon::now()->subHours(24);
-        
+
         foreach ($fuelTypes as $fuelType) {
             // Get current prices with station details using subquery for latest prices
             $prices = DB::table('stations as s')
@@ -341,7 +343,7 @@ class GeographicRepository
                 'max' => max($pricesArray),
                 'median' => $this->calculateMedian($pricesArray),
                 'stddev' => round($this->calculateStdDev($pricesArray), 2),
-                'coefficient_variation' => $avgPrice > 0 ? round($this->calculateStdDev($pricesArray) / $avgPrice * 100, 2) : 0
+                'coefficient_variation' => $avgPrice > 0 ? round($this->calculateStdDev($pricesArray) / $avgPrice * 100, 2) : 0,
             ];
 
             // Get top performers (cheapest)
@@ -351,7 +353,7 @@ class GeographicRepository
                     'nombre' => $station->nombre,
                     'brand' => $station->brand,
                     'price' => $station->price,
-                    'vs_avg' => round($station->price - $avgPrice, 2)
+                    'vs_avg' => round($station->price - $avgPrice, 2),
                 ];
             })->values()->toArray();
 
@@ -362,7 +364,7 @@ class GeographicRepository
                     'nombre' => $station->nombre,
                     'brand' => $station->brand,
                     'price' => $station->price,
-                    'vs_avg' => round($station->price - $avgPrice, 2)
+                    'vs_avg' => round($station->price - $avgPrice, 2),
                 ];
             })->values()->toArray();
 
@@ -375,7 +377,7 @@ class GeographicRepository
                 ->where('fuel_type', $fuelType)
                 ->whereBetween('changed_at', [
                     date('Y-m-d H:i:s', strtotime('-8 days')),
-                    date('Y-m-d H:i:s', strtotime('-7 days'))
+                    date('Y-m-d H:i:s', strtotime('-7 days')),
                 ])
                 ->avg('price');
 
@@ -406,19 +408,19 @@ class GeographicRepository
                 'price_distribution' => $distribution,
                 'last_update' => $prices->max('changed_at'),
                 'vs_last_week' => $vsLastWeek,
-                'vs_estado_avg' => $vsEstadoAvg
+                'vs_estado_avg' => $vsEstadoAvg,
             ];
         }
 
         $trends = [
             'vs_last_week' => [],
-            'vs_estado_avg' => []
+            'vs_estado_avg' => [],
         ];
 
         foreach ($fuelTypes as $fuelType) {
             $trends['vs_last_week'][$fuelType] = $stats[$fuelType]['vs_last_week'] ?? null;
             $trends['vs_estado_avg'][$fuelType] = $stats[$fuelType]['vs_estado_avg'] ?? null;
-            
+
             // Remove these from individual stats to avoid duplication
             if (isset($stats[$fuelType])) {
                 unset($stats[$fuelType]['vs_last_week']);
@@ -430,10 +432,10 @@ class GeographicRepository
             'municipio' => [
                 'id' => $municipio->id,
                 'nombre' => $municipio->nombre,
-                'estado' => $municipio->estado_nombre
+                'estado' => $municipio->estado_nombre,
             ],
             'statistics' => $stats,
-            'trends' => $trends
+            'trends' => $trends,
         ];
     }
 
@@ -484,14 +486,14 @@ class GeographicRepository
         if (empty($values)) {
             return 0;
         }
-        
+
         sort($values);
         $count = count($values);
-        
+
         if ($count % 2 == 0) {
             return round(($values[$count / 2 - 1] + $values[$count / 2]) / 2, 2);
         }
-        
+
         return round($values[floor($count / 2)], 2);
     }
 
@@ -521,9 +523,9 @@ class GeographicRepository
         $min = min($prices);
         $max = max($prices);
         $range = $max - $min;
-        
+
         if ($range == 0) {
-            return [sprintf("%.2f", $min) => count($prices)];
+            return [sprintf('%.2f', $min) => count($prices)];
         }
 
         $bucketSize = $range / 5; // 5 buckets
@@ -532,7 +534,7 @@ class GeographicRepository
         for ($i = 0; $i < 5; $i++) {
             $bucketMin = $min + ($i * $bucketSize);
             $bucketMax = $min + (($i + 1) * $bucketSize);
-            $key = sprintf("%.2f-%.2f", $bucketMin, $bucketMax);
+            $key = sprintf('%.2f-%.2f', $bucketMin, $bucketMax);
             $distribution[$key] = 0;
         }
 
@@ -540,7 +542,7 @@ class GeographicRepository
             $bucketIndex = min(floor(($price - $min) / $bucketSize), 4);
             $bucketMin = $min + ($bucketIndex * $bucketSize);
             $bucketMax = $min + (($bucketIndex + 1) * $bucketSize);
-            $key = sprintf("%.2f-%.2f", $bucketMin, $bucketMax);
+            $key = sprintf('%.2f-%.2f', $bucketMin, $bucketMax);
             if (isset($distribution[$key])) {
                 $distribution[$key]++;
             }
@@ -555,13 +557,13 @@ class GeographicRepository
             return false;
         }
 
-        $exists = DB::select("
+        $exists = DB::select('
             SELECT EXISTS (
                 SELECT 1
                 FROM pg_matviews
                 WHERE matviewname = ?
             ) as exists
-        ", [$viewName]);
+        ', [$viewName]);
 
         return $exists[0]->exists ?? false;
     }
@@ -573,7 +575,7 @@ class GeographicRepository
         }
 
         $twentyFourHoursAgo = Carbon::now()->subHours(24);
-        
+
         // Fetch all prices in one query
         $allPrices = DB::table('stations as s')
             ->join('price_changes as pc', 'pc.station_numero', '=', 's.numero')
@@ -601,7 +603,7 @@ class GeographicRepository
             foreach ($fuelTypes as $fuelType => $prices) {
                 $statistics[$estadoId][$fuelType] = [
                     'median' => $this->calculateMedian($prices),
-                    'stddev' => $this->calculateStdDev($prices)
+                    'stddev' => $this->calculateStdDev($prices),
                 ];
             }
         }
@@ -613,7 +615,7 @@ class GeographicRepository
     {
         $query = DB::table('estado_price_aggregates');
 
-        if (!empty($filters['fuel_type'])) {
+        if (! empty($filters['fuel_type'])) {
             $query->where('fuel_type', $filters['fuel_type']);
         }
 
@@ -624,13 +626,13 @@ class GeographicRepository
         $nationalTotals = ['regular' => [], 'premium' => [], 'diesel' => []];
 
         foreach ($results as $row) {
-            if (!isset($estados[$row->estado_id])) {
+            if (! isset($estados[$row->estado_id])) {
                 $estados[$row->estado_id] = [
                     'estado_id' => $row->estado_id,
                     'estado_nombre' => $row->estado_nombre,
                     'estado_codigo' => $row->estado_codigo,
                     'fuel_prices' => [],
-                    'total_stations' => 0
+                    'total_stations' => 0,
                 ];
             }
 
@@ -641,7 +643,7 @@ class GeographicRepository
                 'median' => round($row->median_price, 2),
                 'stddev' => round($row->stddev_price, 2),
                 'spread' => round($row->max_price - $row->min_price, 2),
-                'station_count' => $row->station_count
+                'station_count' => $row->station_count,
             ];
 
             $estados[$row->estado_id]['total_stations'] = max(
@@ -672,8 +674,8 @@ class GeographicRepository
 
         $cheapestEstado = '';
         $mostExpensiveEstado = '';
-        
-        if (!empty($regularPrices)) {
+
+        if (! empty($regularPrices)) {
             asort($regularPrices);
             $cheapestEstado = array_key_first($regularPrices);
             $mostExpensiveEstado = array_key_last($regularPrices);
@@ -692,10 +694,11 @@ class GeographicRepository
         usort($estados, function ($a, $b) use ($sortBy, $sortOrder) {
             $aVal = $a[$sortBy] ?? $a['estado_nombre'];
             $bVal = $b[$sortBy] ?? $b['estado_nombre'];
-            
+
             if ($sortOrder === 'desc') {
                 return $bVal <=> $aVal;
             }
+
             return $aVal <=> $bVal;
         });
 
@@ -705,8 +708,8 @@ class GeographicRepository
                 'total_estados' => count($estados),
                 'national_average' => $nationalAverage,
                 'cheapest_estado' => $cheapestEstado,
-                'most_expensive_estado' => $mostExpensiveEstado
-            ]
+                'most_expensive_estado' => $mostExpensiveEstado,
+            ],
         ];
     }
 }

@@ -38,12 +38,12 @@ return [
     'thresholds' => [
         // Trend detection threshold percentage
         'trend_change_percentage' => env('ANALYTICS_TREND_THRESHOLD', 0.5),
-        
+
         // Ranking recommendation percentiles
         'excellent_percentile' => 75,
         'good_percentile' => 50,
         'weak_percentile' => 25,
-        
+
         // Market share calculation weight
         'price_weight' => env('ANALYTICS_PRICE_WEIGHT', 0.7),
     ],

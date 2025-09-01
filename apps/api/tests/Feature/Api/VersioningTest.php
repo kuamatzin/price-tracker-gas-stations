@@ -2,10 +2,10 @@
 
 namespace Tests\Feature\Api;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
 
 class VersioningTest extends TestCase
 {
@@ -72,11 +72,11 @@ class VersioningTest extends TestCase
 
         foreach ($v1Endpoints as $endpoint) {
             $response = $this->get($endpoint);
-            
+
             // Should not return 404
-            $this->assertNotEquals(404, $response->status(), 
+            $this->assertNotEquals(404, $response->status(),
                 "Endpoint $endpoint returned 404");
-            
+
             // Should have version header
             $response->assertHeader('API-Version', 'v1');
         }
@@ -88,9 +88,9 @@ class VersioningTest extends TestCase
     public function test_version_is_included_in_documentation()
     {
         $response = $this->get('/api/documentation.json');
-        
+
         $spec = $response->json();
-        
+
         $this->assertArrayHasKey('info', $spec);
         $this->assertArrayHasKey('version', $spec['info']);
         $this->assertEquals('1.0.0', $spec['info']['version']);
@@ -108,9 +108,9 @@ class VersioningTest extends TestCase
 
         $sunsetHeader = $response->headers->get('Sunset');
         $sunsetDate = \DateTime::createFromFormat('D, d M Y H:i:s \G\M\T', $sunsetHeader);
-        
+
         $this->assertInstanceOf(\DateTime::class, $sunsetDate);
-        $this->assertGreaterThan(new \DateTime(), $sunsetDate, 
+        $this->assertGreaterThan(new \DateTime, $sunsetDate,
             'Sunset date should be in the future');
     }
 
@@ -150,7 +150,7 @@ class VersioningTest extends TestCase
 
         foreach ($endpoints as $endpoint) {
             $response = $this->get($endpoint);
-            
+
             if ($response->status() !== 404) {
                 $response->assertHeader('API-Version', 'v1');
                 $response->assertHeader('Sunset');
@@ -168,11 +168,11 @@ class VersioningTest extends TestCase
 
         // V1 specific behavior
         $response = $this->get('/api/v1/prices/current');
-        
+
         // Check for v1-specific response structure
         if ($response->status() === 200) {
             $data = $response->json();
-            
+
             // V1 uses 'success' key in responses
             if (isset($data['success'])) {
                 $this->assertArrayHasKey('success', $data);

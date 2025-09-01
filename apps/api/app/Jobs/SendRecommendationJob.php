@@ -51,29 +51,30 @@ class SendRecommendationJob implements ShouldQueue
     {
         try {
             $user = User::find($this->userId);
-            
-            if (!$user) {
+
+            if (! $user) {
                 Log::warning('User not found for recommendation', ['user_id' => $this->userId]);
+
                 return;
             }
-            
+
             $notificationService = app(NotificationService::class);
             $sent = $notificationService->sendRecommendation($user, $this->recommendation);
-            
-            if (!$sent) {
+
+            if (! $sent) {
                 Log::warning('Recommendation not sent', [
                     'user_id' => $this->userId,
-                    'reason' => 'Service returned false'
+                    'reason' => 'Service returned false',
                 ]);
             }
-            
+
         } catch (\Exception $e) {
             Log::error('Recommendation job failed', [
                 'user_id' => $this->userId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             // Re-throw to trigger retry
             throw $e;
         }
@@ -87,7 +88,7 @@ class SendRecommendationJob implements ShouldQueue
         Log::error('Recommendation job permanently failed', [
             'user_id' => $this->userId,
             'recommendation' => substr($this->recommendation, 0, 100),
-            'error' => $exception->getMessage()
+            'error' => $exception->getMessage(),
         ]);
     }
 

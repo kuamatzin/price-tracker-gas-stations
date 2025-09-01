@@ -3,17 +3,20 @@
 namespace App\Telegram\Commands;
 
 use App\Services\Telegram\AnalyticsService;
-use App\Services\Telegram\SparklineGenerator;
 use App\Services\Telegram\PricingService;
+use App\Services\Telegram\SparklineGenerator;
 use Telegram\Bot\Commands\Command;
 
 class TendenciaCommand extends Command
 {
     protected string $name = 'tendencia';
+
     protected string $description = 'Ver tendencia de precios de los últimos 7 días';
-    
+
     private AnalyticsService $analyticsService;
+
     private SparklineGenerator $sparklineGenerator;
+
     private PricingService $pricingService;
 
     public function __construct(
@@ -29,23 +32,24 @@ class TendenciaCommand extends Command
     public function handle(): void
     {
         $chatId = $this->getUpdate()->getMessage()->getChat()->getId();
-        
+
         try {
             $userId = $this->getUserId($chatId);
         } catch (\Exception $e) {
             $this->replyWithMessage([
-                'text' => "❌ Usuario no registrado. Usa /start para registrarte."
+                'text' => '❌ Usuario no registrado. Usa /start para registrarte.',
             ]);
+
             return;
         }
-        
+
         $arguments = $this->getArguments();
 
         // Parse arguments for station alias and fuel type filter
         $stationAlias = null;
         $fuelTypeFilter = null;
         $days = 7; // Default to 7 days
-        
+
         foreach ($arguments as $arg) {
             $lowerArg = strtolower($arg);
             if (in_array($lowerArg, ['regular', 'premium', 'diesel'])) {
@@ -61,32 +65,34 @@ class TendenciaCommand extends Command
             // Send typing action
             $this->telegram->sendChatAction([
                 'chat_id' => $chatId,
-                'action' => 'typing'
+                'action' => 'typing',
             ]);
 
             $userStations = $this->pricingService->getUserStations($userId);
 
             if ($userStations->isEmpty()) {
                 $this->replyWithMessage([
-                    'text' => "❌ No tienes estaciones registradas.\n\nUsa /registrar para agregar tu primera estación."
+                    'text' => "❌ No tienes estaciones registradas.\n\nUsa /registrar para agregar tu primera estación.",
                 ]);
+
                 return;
             }
 
             // Determine which station to use
             $selectedStation = $this->selectStation($userStations, $stationAlias);
-            
-            if (!$selectedStation) {
+
+            if (! $selectedStation) {
                 if ($stationAlias) {
                     $this->replyWithMessage([
-                        'text' => "❌ No encontré la estación '$stationAlias'.\n\n" .
-                                 "Tus estaciones: " . $userStations->pluck('alias')->implode(', ')
+                        'text' => "❌ No encontré la estación '$stationAlias'.\n\n".
+                                 'Tus estaciones: '.$userStations->pluck('alias')->implode(', '),
                     ]);
                 } else {
                     $this->replyWithMessage([
-                        'text' => "❌ No se pudo determinar la estación. Especifica un alias."
+                        'text' => '❌ No se pudo determinar la estación. Especifica un alias.',
                     ]);
                 }
+
                 return;
             }
 
@@ -99,23 +105,24 @@ class TendenciaCommand extends Command
 
             if (empty($trends['trends'])) {
                 $this->replyWithMessage([
-                    'text' => "❌ No hay suficientes datos para mostrar tendencias."
+                    'text' => '❌ No hay suficientes datos para mostrar tendencias.',
                 ]);
+
                 return;
             }
 
             // Generate sparklines for each fuel type
             $sparklines = [];
             $insights = [];
-            
+
             foreach ($trends['trends'] as $fuelType => $trendData) {
                 if ($fuelTypeFilter && $fuelType !== $fuelTypeFilter) {
                     continue;
                 }
 
                 $prices = array_column($trendData['daily_prices'], 'avg_price');
-                
-                if (!empty($prices)) {
+
+                if (! empty($prices)) {
                     $sparklines[$fuelType] = $this->sparklineGenerator->generate(
                         $prices,
                         ucfirst($fuelType),
@@ -144,18 +151,18 @@ class TendenciaCommand extends Command
 
             $this->replyWithMessage([
                 'text' => $response,
-                'parse_mode' => 'Markdown'
+                'parse_mode' => 'Markdown',
             ]);
 
         } catch (\Exception $e) {
             \Log::error('TendenciaCommand error', [
                 'chat_id' => $chatId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             $this->replyWithMessage([
-                'text' => "❌ Ocurrió un error al analizar las tendencias. Por favor intenta más tarde."
+                'text' => '❌ Ocurrió un error al analizar las tendencias. Por favor intenta más tarde.',
             ]);
         }
     }
@@ -163,11 +170,11 @@ class TendenciaCommand extends Command
     private function getUserId(int $chatId): int
     {
         $user = \App\Models\User::where('telegram_chat_id', $chatId)->first();
-        
-        if (!$user) {
+
+        if (! $user) {
             throw new \Exception('Usuario no registrado');
         }
-        
+
         return $user->id;
     }
 
@@ -226,13 +233,13 @@ class TendenciaCommand extends Command
         float $radiusKm
     ): string {
         $stationName = $station->alias ?? $station->station_name;
-        
+
         $response = "📊 *Tendencia de Precios - Últimos {$days} días*\n";
         $response .= "📍 Estación: {$stationName}\n";
         $response .= "🗺️ Área: {$radiusKm}km de radio\n\n";
 
         if (empty($sparklines)) {
-            return $response . "No hay datos disponibles para el período seleccionado.";
+            return $response.'No hay datos disponibles para el período seleccionado.';
         }
 
         // Add sparklines
@@ -241,7 +248,7 @@ class TendenciaCommand extends Command
         }
 
         $response .= "\n💡 *Análisis:*\n";
-        
+
         // Add insights
         foreach ($insights as $fuelType => $insight) {
             $response .= "{$insight}\n";
@@ -258,7 +265,7 @@ class TendenciaCommand extends Command
     {
         $risingCount = 0;
         $fallingCount = 0;
-        
+
         foreach ($insights as $insight) {
             if (strpos($insight, 'alza') !== false || strpos($insight, 'subiendo') !== false) {
                 $risingCount++;
@@ -268,11 +275,11 @@ class TendenciaCommand extends Command
         }
 
         if ($risingCount > $fallingCount) {
-            return "Mercado en tendencia alcista. Evalúa ajustar precios para mantener márgenes.";
+            return 'Mercado en tendencia alcista. Evalúa ajustar precios para mantener márgenes.';
         } elseif ($fallingCount > $risingCount) {
-            return "Mercado a la baja. Oportunidad para ganar participación con precios competitivos.";
+            return 'Mercado a la baja. Oportunidad para ganar participación con precios competitivos.';
         } else {
-            return "Mercado estable. Mantén tu estrategia actual y monitorea cambios.";
+            return 'Mercado estable. Mantén tu estrategia actual y monitorea cambios.';
         }
     }
 }

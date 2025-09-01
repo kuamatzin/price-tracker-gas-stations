@@ -10,6 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 class AccountLockout
 {
     protected const MAX_ATTEMPTS = 5;
+
     protected const LOCKOUT_DURATION = 900; // 15 minutes in seconds
 
     /**
@@ -19,10 +20,10 @@ class AccountLockout
     {
         if ($request->routeIs('auth.login')) {
             $key = $this->getLockoutKey($request);
-            
+
             if ($this->isLockedOut($key)) {
                 $seconds = $this->getBlockedSeconds($key);
-                
+
                 return response()->json([
                     'message' => sprintf(
                         'Demasiados intentos de inicio de sesión. Por favor, intenta de nuevo en %d segundos.',
@@ -40,7 +41,7 @@ class AccountLockout
      */
     protected function isLockedOut(string $key): bool
     {
-        return Cache::has($key . ':lockout');
+        return Cache::has($key.':lockout');
     }
 
     /**
@@ -48,7 +49,8 @@ class AccountLockout
      */
     protected function getBlockedSeconds(string $key): int
     {
-        $lockoutTime = Cache::get($key . ':lockout_time', 0);
+        $lockoutTime = Cache::get($key.':lockout_time', 0);
+
         return max(0, self::LOCKOUT_DURATION - (time() - $lockoutTime));
     }
 
@@ -57,7 +59,7 @@ class AccountLockout
      */
     protected function getLockoutKey(Request $request): string
     {
-        return 'login_attempts:' . sha1($request->ip() . '|' . $request->input('email', ''));
+        return 'login_attempts:'.sha1($request->ip().'|'.$request->input('email', ''));
     }
 
     /**
@@ -65,14 +67,14 @@ class AccountLockout
      */
     public static function recordFailedAttempt(Request $request): void
     {
-        $key = 'login_attempts:' . sha1($request->ip() . '|' . $request->input('email', ''));
+        $key = 'login_attempts:'.sha1($request->ip().'|'.$request->input('email', ''));
         $attempts = Cache::get($key, 0) + 1;
-        
+
         Cache::put($key, $attempts, self::LOCKOUT_DURATION);
-        
+
         if ($attempts >= self::MAX_ATTEMPTS) {
-            Cache::put($key . ':lockout', true, self::LOCKOUT_DURATION);
-            Cache::put($key . ':lockout_time', time(), self::LOCKOUT_DURATION);
+            Cache::put($key.':lockout', true, self::LOCKOUT_DURATION);
+            Cache::put($key.':lockout_time', time(), self::LOCKOUT_DURATION);
         }
     }
 
@@ -81,9 +83,9 @@ class AccountLockout
      */
     public static function clearFailedAttempts(Request $request): void
     {
-        $key = 'login_attempts:' . sha1($request->ip() . '|' . $request->input('email', ''));
+        $key = 'login_attempts:'.sha1($request->ip().'|'.$request->input('email', ''));
         Cache::forget($key);
-        Cache::forget($key . ':lockout');
-        Cache::forget($key . ':lockout_time');
+        Cache::forget($key.':lockout');
+        Cache::forget($key.':lockout_time');
     }
 }

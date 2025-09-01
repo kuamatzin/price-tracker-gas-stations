@@ -13,15 +13,15 @@ class EntidadFactory extends Factory
     {
         $estados = [
             'CDMX', 'Jalisco', 'Nuevo León', 'Puebla', 'Guanajuato',
-            'Chiapas', 'Veracruz', 'Oaxaca', 'Chihuahua', 'Guerrero'
+            'Chiapas', 'Veracruz', 'Oaxaca', 'Chihuahua', 'Guerrero',
         ];
 
         $nombre = $this->faker->randomElement($estados);
-        
+
         return [
             'id' => $this->faker->unique()->numberBetween(1, 32),
             'nombre' => $nombre,
-            'codigo' => strtoupper(substr($nombre, 0, 3))
+            'codigo' => strtoupper(substr($nombre, 0, 3)),
         ];
     }
 }

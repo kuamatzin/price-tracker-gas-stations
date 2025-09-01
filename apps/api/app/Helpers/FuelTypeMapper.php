@@ -39,8 +39,9 @@ class FuelTypeMapper
     /**
      * Map SubProducto to normalized fuel type
      *
-     * @param string $subproducto The government API SubProducto field
+     * @param  string  $subproducto  The government API SubProducto field
      * @return string One of: 'regular', 'premium', 'diesel'
+     *
      * @throws \InvalidArgumentException If fuel type cannot be determined
      */
     public static function mapToFuelType(string $subproducto): string
@@ -49,9 +50,9 @@ class FuelTypeMapper
 
         // Check Regular patterns
         foreach (self::REGULAR_PATTERNS as $pattern) {
-            if (stripos($normalized, $pattern) !== false || 
-                stripos($normalized, 'regular') !== false && 
-                stripos($normalized, 'octano') !== false && 
+            if (stripos($normalized, $pattern) !== false ||
+                stripos($normalized, 'regular') !== false &&
+                stripos($normalized, 'octano') !== false &&
                 stripos($normalized, '87') !== false) {
                 return 'regular';
             }
@@ -59,9 +60,9 @@ class FuelTypeMapper
 
         // Check Premium patterns
         foreach (self::PREMIUM_PATTERNS as $pattern) {
-            if (stripos($normalized, $pattern) !== false || 
-                stripos($normalized, 'premium') !== false && 
-                stripos($normalized, 'octano') !== false && 
+            if (stripos($normalized, $pattern) !== false ||
+                stripos($normalized, 'premium') !== false &&
+                stripos($normalized, 'octano') !== false &&
                 (stripos($normalized, '91') !== false || stripos($normalized, '92') !== false)) {
                 return 'premium';
             }
@@ -76,15 +77,15 @@ class FuelTypeMapper
 
         // Additional checks for partial matches
         $lowerSubproducto = strtolower($normalized);
-        
+
         if (str_contains($lowerSubproducto, 'diésel') || str_contains($lowerSubproducto, 'diesel')) {
             return 'diesel';
         }
-        
+
         if (str_contains($lowerSubproducto, 'premium')) {
             return 'premium';
         }
-        
+
         if (str_contains($lowerSubproducto, 'regular')) {
             return 'regular';
         }
@@ -95,12 +96,11 @@ class FuelTypeMapper
     /**
      * Get all known SubProducto variations for a fuel type
      *
-     * @param string $fuelType One of: 'regular', 'premium', 'diesel'
-     * @return array
+     * @param  string  $fuelType  One of: 'regular', 'premium', 'diesel'
      */
     public static function getKnownVariations(string $fuelType): array
     {
-        return match($fuelType) {
+        return match ($fuelType) {
             'regular' => self::REGULAR_PATTERNS,
             'premium' => self::PREMIUM_PATTERNS,
             'diesel' => self::DIESEL_PATTERNS,
@@ -110,9 +110,6 @@ class FuelTypeMapper
 
     /**
      * Validate if a fuel type is valid
-     *
-     * @param string $fuelType
-     * @return bool
      */
     public static function isValidFuelType(string $fuelType): bool
     {

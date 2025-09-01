@@ -61,7 +61,7 @@ class CommandRegistry
 
     public function __construct()
     {
-        $this->commands = new Collection();
+        $this->commands = new Collection;
     }
 
     /**
@@ -158,13 +158,14 @@ class CommandRegistry
             $distance = levenshtein($input, $alias);
             if ($distance <= $maxDistance) {
                 $resolvedCommand = $this->aliases[$alias];
-                if (!isset($similar[$resolvedCommand]) || $similar[$resolvedCommand] > $distance) {
+                if (! isset($similar[$resolvedCommand]) || $similar[$resolvedCommand] > $distance) {
                     $similar[$resolvedCommand] = $distance;
                 }
             }
         }
 
         asort($similar);
+
         return array_slice(array_keys($similar), 0, 3);
     }
 }

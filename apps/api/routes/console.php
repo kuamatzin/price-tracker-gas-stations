@@ -2,8 +2,8 @@
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
@@ -27,10 +27,10 @@ if (config('telescope.enabled')) {
     Schedule::command('telescope:prune')
         ->daily()
         ->at('02:00');
-    
+
     // Keep entries for 7 days in local, 30 days in production
     Schedule::command('telescope:prune', [
-        '--hours' => config('app.env') === 'production' ? 720 : 168
+        '--hours' => config('app.env') === 'production' ? 720 : 168,
     ])
         ->daily()
         ->at('02:30');
@@ -64,13 +64,13 @@ Schedule::call(function () {
     $activeStations = \App\Models\Station::where('is_active', true)
         ->whereHas('users')
         ->pluck('numero');
-    
+
     foreach ($activeStations as $stationNumero) {
         \App\Jobs\GenerateAnalyticsJob::dispatch($stationNumero, ['trends', 'ranking'])
             ->onQueue('low');
     }
-    
-    Log::info('Dispatched analytics pre-generation for ' . $activeStations->count() . ' stations');
+
+    Log::info('Dispatched analytics pre-generation for '.$activeStations->count().' stations');
 })->dailyAt('04:00')
     ->name('analytics:pre-generate')
     ->withoutOverlapping();
@@ -79,12 +79,12 @@ Schedule::call(function () {
 Schedule::call(function () {
     // Remove analytics cache older than 7 days
     $cutoffDate = now()->subDays(7);
-    
+
     \Illuminate\Support\Facades\DB::table('cache')
         ->where('key', 'like', 'analytics:%')
         ->where('expiration', '<', $cutoffDate->timestamp)
         ->delete();
-    
+
     Log::info('Cleaned up old analytics cache entries');
 })->weekly()
     ->sundays()
@@ -98,9 +98,9 @@ Schedule::call(function () {
         'active_alerts' => \App\Models\AlertConfiguration::where('is_active', true)->count(),
         'triggered_today' => \App\Models\AlertConfiguration::where('last_triggered_at', '>=', now()->startOfDay())->count(),
     ];
-    
+
     Log::info('Alert system health check', $stats);
-    
+
     // Alert if no alerts have been triggered in 24 hours (possible issue)
     if ($stats['active_alerts'] > 10 && $stats['triggered_today'] === 0) {
         Log::warning('No alerts triggered in 24 hours despite active configurations');

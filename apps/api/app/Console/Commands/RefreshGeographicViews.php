@@ -28,6 +28,7 @@ class RefreshGeographicViews extends Command
     {
         if (config('database.default') !== 'pgsql') {
             $this->info('Materialized views are only available for PostgreSQL');
+
             return Command::SUCCESS;
         }
 
@@ -37,16 +38,17 @@ class RefreshGeographicViews extends Command
             // Refresh estado aggregates view
             $this->info('Refreshing estado_price_aggregates...');
             DB::statement('REFRESH MATERIALIZED VIEW CONCURRENTLY estado_price_aggregates');
-            
+
             // Refresh municipio aggregates view
             $this->info('Refreshing municipio_price_aggregates...');
             DB::statement('REFRESH MATERIALIZED VIEW CONCURRENTLY municipio_price_aggregates');
-            
+
             $this->info('✓ Materialized views refreshed successfully');
-            
+
             return Command::SUCCESS;
         } catch (\Exception $e) {
-            $this->error('Failed to refresh views: ' . $e->getMessage());
+            $this->error('Failed to refresh views: '.$e->getMessage());
+
             return Command::FAILURE;
         }
     }

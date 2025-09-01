@@ -34,7 +34,7 @@ class StationResource extends JsonResource
     private function formatPrices($prices): array
     {
         $formatted = [];
-        
+
         foreach ($prices as $price) {
             $formatted[$price->fuel_type] = [
                 'price' => (float) $price->price,
@@ -43,7 +43,7 @@ class StationResource extends JsonResource
                 'change_percent' => (float) ($price->change_percent ?? 0),
             ];
         }
-        
+
         return $formatted;
     }
 }

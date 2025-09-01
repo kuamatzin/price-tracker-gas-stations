@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
 use Carbon\Carbon;
+use Illuminate\Foundation\Http\FormRequest;
 
 class HistoryRequest extends FormRequest
 {
@@ -37,7 +37,7 @@ class HistoryRequest extends FormRequest
             if ($this->start_date && $this->end_date) {
                 $start = Carbon::parse($this->start_date);
                 $end = Carbon::parse($this->end_date);
-                
+
                 // Max 365 days
                 if ($start->diffInDays($end) > 365) {
                     $validator->errors()->add('date_range', 'Date range cannot exceed 365 days.');

@@ -15,7 +15,7 @@ class UserPreferenceRepository
     public function getPreferences(User $user): array
     {
         $cacheKey = "user:preferences:{$user->id}";
-        
+
         return Cache::remember($cacheKey, 300, function () use ($user) {
             return $user->notification_preferences ?? $this->getDefaultPreferences();
         });
@@ -28,18 +28,18 @@ class UserPreferenceRepository
     {
         // Validate preferences
         $validated = $this->validatePreferences($preferences);
-        
+
         // Merge with existing preferences
         $existingPreferences = $user->notification_preferences ?? [];
         $mergedPreferences = array_merge($existingPreferences, $validated);
-        
+
         // Update user
         $user->notification_preferences = $mergedPreferences;
         $user->save();
-        
+
         // Clear cache
         $this->clearPreferencesCache($user);
-        
+
         return $mergedPreferences;
     }
 
@@ -49,7 +49,7 @@ class UserPreferenceRepository
     public function getNotificationSettings(User $user): array
     {
         $preferences = $this->getPreferences($user);
-        
+
         return [
             'daily_summary_enabled' => $preferences['daily_summary_enabled'] ?? true,
             'daily_summary_time' => $preferences['daily_summary_time'] ?? '07:00',
@@ -69,6 +69,7 @@ class UserPreferenceRepository
     public function updateNotificationSettings(User $user, array $settings): array
     {
         $validSettings = $this->validateNotificationSettings($settings);
+
         return $this->updatePreferences($user, $validSettings);
     }
 
@@ -78,7 +79,7 @@ class UserPreferenceRepository
     public function getAlertThresholds(User $user): array
     {
         $preferences = $this->getPreferences($user);
-        
+
         return [
             'price_change_threshold' => $preferences['price_change_threshold'] ?? 2.0,
             'threshold_type' => $preferences['threshold_type'] ?? 'percentage',
@@ -94,6 +95,7 @@ class UserPreferenceRepository
     public function updateAlertThresholds(User $user, array $thresholds): array
     {
         $validThresholds = $this->validateThresholds($thresholds);
+
         return $this->updatePreferences($user, $validThresholds);
     }
 
@@ -103,16 +105,16 @@ class UserPreferenceRepository
     public function setFuelTypeThreshold(User $user, string $fuelType, float $threshold): array
     {
         $preferences = $this->getPreferences($user);
-        
-        if (!in_array($fuelType, ['regular', 'premium', 'diesel'])) {
+
+        if (! in_array($fuelType, ['regular', 'premium', 'diesel'])) {
             throw new \InvalidArgumentException("Invalid fuel type: {$fuelType}");
         }
-        
+
         $fuelTypeThresholds = $preferences['fuel_type_thresholds'] ?? [];
         $fuelTypeThresholds[$fuelType] = $threshold;
-        
+
         return $this->updatePreferences($user, [
-            'fuel_type_thresholds' => $fuelTypeThresholds
+            'fuel_type_thresholds' => $fuelTypeThresholds,
         ]);
     }
 
@@ -122,7 +124,7 @@ class UserPreferenceRepository
     public function getMonitoringPreferences(User $user): array
     {
         $preferences = $this->getPreferences($user);
-        
+
         return [
             'primary_station_id' => $preferences['primary_station_id'] ?? null,
             'alert_radius_km' => $preferences['alert_radius_km'] ?? 5,
@@ -138,6 +140,7 @@ class UserPreferenceRepository
     public function updateMonitoringPreferences(User $user, array $monitoring): array
     {
         $validMonitoring = $this->validateMonitoringPreferences($monitoring);
+
         return $this->updatePreferences($user, $validMonitoring);
     }
 
@@ -147,9 +150,9 @@ class UserPreferenceRepository
     public function setSilencePeriod(User $user, ?\DateTime $until): array
     {
         $silenceUntil = $until ? $until->format('Y-m-d H:i:s') : null;
-        
+
         return $this->updatePreferences($user, [
-            'silence_until' => $silenceUntil
+            'silence_until' => $silenceUntil,
         ]);
     }
 
@@ -160,12 +163,12 @@ class UserPreferenceRepository
     {
         $preferences = $this->getPreferences($user);
         unset($preferences['silence_until']);
-        
+
         $user->notification_preferences = $preferences;
         $user->save();
-        
+
         $this->clearPreferencesCache($user);
-        
+
         return $preferences;
     }
 
@@ -175,14 +178,14 @@ class UserPreferenceRepository
     public function isInSilencePeriod(User $user): bool
     {
         $preferences = $this->getPreferences($user);
-        
-        if (!isset($preferences['silence_until'])) {
+
+        if (! isset($preferences['silence_until'])) {
             return false;
         }
-        
+
         $silenceUntil = new \DateTime($preferences['silence_until']);
-        $now = new \DateTime();
-        
+        $now = new \DateTime;
+
         return $silenceUntil > $now;
     }
 
@@ -238,13 +241,13 @@ class UserPreferenceRepository
             'fuel_type_thresholds.premium' => 'sometimes|numeric|min:0.1|max:20',
             'fuel_type_thresholds.diesel' => 'sometimes|numeric|min:0.1|max:20',
         ];
-        
+
         $validator = Validator::make($preferences, $rules);
-        
+
         if ($validator->fails()) {
             throw new ValidationException($validator);
         }
-        
+
         return $validator->validated();
     }
 
@@ -264,13 +267,13 @@ class UserPreferenceRepository
             'email_enabled' => 'sometimes|boolean',
             'silence_until' => 'sometimes|nullable|date',
         ];
-        
+
         $validator = Validator::make($settings, $rules);
-        
+
         if ($validator->fails()) {
             throw new ValidationException($validator);
         }
-        
+
         return $validator->validated();
     }
 
@@ -289,13 +292,13 @@ class UserPreferenceRepository
             'fuel_type_thresholds.premium' => 'sometimes|numeric|min:0.1|max:20',
             'fuel_type_thresholds.diesel' => 'sometimes|numeric|min:0.1|max:20',
         ];
-        
+
         $validator = Validator::make($thresholds, $rules);
-        
+
         if ($validator->fails()) {
             throw new ValidationException($validator);
         }
-        
+
         return $validator->validated();
     }
 
@@ -312,13 +315,13 @@ class UserPreferenceRepository
             'competitor_monitoring' => 'sometimes|boolean',
             'market_trend_alerts' => 'sometimes|boolean',
         ];
-        
+
         $validator = Validator::make($monitoring, $rules);
-        
+
         if ($validator->fails()) {
             throw new ValidationException($validator);
         }
-        
+
         return $validator->validated();
     }
 

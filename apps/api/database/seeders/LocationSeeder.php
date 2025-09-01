@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -11,7 +10,9 @@ use Illuminate\Support\Facades\Log;
 class LocationSeeder extends Seeder
 {
     private const API_BASE_URL = 'https://api-catalogo.cne.gob.mx/api/utiles';
+
     private const MAX_RETRIES = 3;
+
     private const RETRY_DELAY = 5; // seconds
 
     /**
@@ -20,22 +21,23 @@ class LocationSeeder extends Seeder
     public function run(): void
     {
         $this->command->info('Starting location data import...');
-        
+
         // Load all estados (states)
         $estados = $this->fetchEstados();
-        
+
         if (empty($estados)) {
             $this->command->error('Failed to fetch estados from API');
+
             return;
         }
-        
+
         $this->command->info(sprintf('Found %d estados to import', count($estados)));
-        
+
         // Process each estado
         foreach ($estados as $estado) {
             $this->processEstado($estado);
         }
-        
+
         $this->command->info('Location data import completed successfully!');
     }
 
@@ -44,32 +46,32 @@ class LocationSeeder extends Seeder
      */
     private function fetchEstados(): array
     {
-        $url = self::API_BASE_URL . '/entidadesfederativas';
-        
+        $url = self::API_BASE_URL.'/entidadesfederativas';
+
         for ($attempt = 1; $attempt <= self::MAX_RETRIES; $attempt++) {
             try {
                 $response = Http::timeout(30)->get($url);
-                
+
                 if ($response->successful()) {
                     return $response->json();
                 }
-                
+
                 Log::warning("Failed to fetch estados (attempt {$attempt})", [
                     'status' => $response->status(),
-                    'body' => $response->body()
+                    'body' => $response->body(),
                 ]);
-                
+
             } catch (\Exception $e) {
                 Log::error("Exception fetching estados (attempt {$attempt})", [
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
             }
-            
+
             if ($attempt < self::MAX_RETRIES) {
                 sleep(self::RETRY_DELAY);
             }
         }
-        
+
         return [];
     }
 
@@ -80,12 +82,13 @@ class LocationSeeder extends Seeder
     {
         $estadoId = $estado['EntidadFederativaId'] ?? null;
         $estadoNombre = $estado['Nombre'] ?? null;
-        
-        if (!$estadoId || !$estadoNombre) {
-            $this->command->warn("Skipping estado with missing data: " . json_encode($estado));
+
+        if (! $estadoId || ! $estadoNombre) {
+            $this->command->warn('Skipping estado with missing data: '.json_encode($estado));
+
             return;
         }
-        
+
         // Insert or update estado (convert string ID to integer)
         DB::table('entidades')->updateOrInsert(
             ['id' => (int) $estadoId],
@@ -93,16 +96,16 @@ class LocationSeeder extends Seeder
                 'nombre' => $estadoNombre,
                 'codigo' => $this->getEstadoCodigo($estadoNombre),
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]
         );
-        
+
         $this->command->info("Processed estado: {$estadoNombre}");
-        
+
         // Fetch and process municipios for this estado (use original string format for API call)
         $municipios = $this->fetchMunicipios($estadoId);
-        
-        if (!empty($municipios)) {
+
+        if (! empty($municipios)) {
             $this->processMunicipios((int) $estadoId, $municipios);
             $this->command->info(sprintf('  - Imported %d municipios', count($municipios)));
         } else {
@@ -115,32 +118,32 @@ class LocationSeeder extends Seeder
      */
     private function fetchMunicipios(string $estadoId): array
     {
-        $url = self::API_BASE_URL . '/municipios?EntidadFederativaId=' . $estadoId;
-        
+        $url = self::API_BASE_URL.'/municipios?EntidadFederativaId='.$estadoId;
+
         for ($attempt = 1; $attempt <= self::MAX_RETRIES; $attempt++) {
             try {
                 $response = Http::timeout(30)->get($url);
-                
+
                 if ($response->successful()) {
                     return $response->json();
                 }
-                
+
                 Log::warning("Failed to fetch municipios for estado {$estadoId} (attempt {$attempt})", [
                     'status' => $response->status(),
-                    'body' => $response->body()
+                    'body' => $response->body(),
                 ]);
-                
+
             } catch (\Exception $e) {
                 Log::error("Exception fetching municipios for estado {$estadoId} (attempt {$attempt})", [
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
                 ]);
             }
-            
+
             if ($attempt < self::MAX_RETRIES) {
                 sleep(self::RETRY_DELAY);
             }
         }
-        
+
         return [];
     }
 
@@ -150,29 +153,29 @@ class LocationSeeder extends Seeder
     private function processMunicipios(int $estadoId, array $municipios): void
     {
         $data = [];
-        
+
         foreach ($municipios as $municipio) {
             $municipioId = $municipio['MunicipioId'] ?? null;
             $municipioNombre = $municipio['Nombre'] ?? null;
-            
-            if (!$municipioId || !$municipioNombre) {
+
+            if (! $municipioId || ! $municipioNombre) {
                 continue;
             }
-            
+
             // Create a unique ID by combining estado and municipio IDs
             // Format: EEMM where EE is estado (padded) and MM is municipio (padded)
             $uniqueId = ($estadoId * 1000) + (int) $municipioId;
-            
+
             $data[] = [
                 'id' => $uniqueId,
                 'entidad_id' => $estadoId,
                 'nombre' => $municipioNombre,
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ];
         }
-        
-        if (!empty($data)) {
+
+        if (! empty($data)) {
             // Insert each municipio individually to avoid issues with upsert
             foreach ($data as $municipio) {
                 DB::table('municipios')->updateOrInsert(
@@ -220,9 +223,9 @@ class LocationSeeder extends Seeder
             'Tlaxcala' => 'TLAX',
             'Veracruz de Ignacio de la Llave' => 'VER',
             'Yucatán' => 'YUC',
-            'Zacatecas' => 'ZAC'
+            'Zacatecas' => 'ZAC',
         ];
-        
+
         return $codigos[$nombre] ?? null;
     }
 }

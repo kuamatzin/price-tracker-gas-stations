@@ -12,7 +12,9 @@ use Illuminate\Support\Facades\Cache;
 class GeoController extends Controller
 {
     protected GeographicRepository $repository;
+
     protected GeographicComparisonService $comparisonService;
+
     protected HeatMapDataService $heatMapService;
 
     public function __construct(
@@ -33,31 +35,40 @@ class GeoController extends Controller
      *     summary="Get state-level aggregated data",
      *     description="Returns aggregated fuel price data for all states",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="fuel_type",
      *         in="query",
      *         description="Filter by fuel type",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"regular", "premium", "diesel"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="sort_by",
      *         in="query",
      *         description="Sort field",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"avg_price", "min_price", "max_price", "station_count"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="sort_order",
      *         in="query",
      *         description="Sort order",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"asc", "desc"}, default="asc")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Successful operation",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="data", type="array", @OA\Items(type="object")),
      *             @OA\Property(property="summary", type="object")
      *         )
@@ -67,15 +78,15 @@ class GeoController extends Controller
     public function estados(Request $request)
     {
         $filters = $request->only(['fuel_type', 'sort_by', 'sort_order']);
-        $cacheKey = 'geo:estados:' . md5(json_encode($filters));
-        
+        $cacheKey = 'geo:estados:'.md5(json_encode($filters));
+
         $data = Cache::remember($cacheKey, 1800, function () use ($filters) {
             return $this->repository->getEstadoAggregates($filters);
         });
 
         return response()->json([
             'data' => $data['estados'],
-            'summary' => $data['summary']
+            'summary' => $data['summary'],
         ]);
     }
 
@@ -87,37 +98,47 @@ class GeoController extends Controller
      *     summary="Get municipalities by state",
      *     description="Returns aggregated fuel price data for municipalities in a state",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="estado",
      *         in="path",
      *         description="State ID",
      *         required=true,
+     *
      *         @OA\Schema(type="integer", example=1)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="fuel_type",
      *         in="query",
      *         description="Filter by fuel type",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"regular", "premium", "diesel"})
      *     ),
+     *
      *     @OA\Parameter(
      *         name="page",
      *         in="query",
      *         description="Page number",
      *         required=false,
+     *
      *         @OA\Schema(type="integer", minimum=1, default=1)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="per_page",
      *         in="query",
      *         description="Items per page",
      *         required=false,
+     *
      *         @OA\Schema(type="integer", minimum=1, maximum=100, default=20)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Successful operation",
+     *
      *         @OA\JsonContent(type="object")
      *     )
      * )
@@ -126,16 +147,16 @@ class GeoController extends Controller
     {
         $request->validate([
             'page' => 'integer|min:1',
-            'per_page' => 'integer|min:1|max:100'
+            'per_page' => 'integer|min:1|max:100',
         ]);
 
         $filters = array_merge(
             $request->only(['fuel_type', 'sort_by', 'sort_order']),
             ['estado' => $estado]
         );
-        
-        $cacheKey = 'geo:municipios:' . md5(json_encode($filters));
-        
+
+        $cacheKey = 'geo:municipios:'.md5(json_encode($filters));
+
         $data = Cache::remember($cacheKey, 1800, function () use ($filters, $request) {
             return $this->repository->getMunicipiosByEstado(
                 $filters['estado'],
@@ -156,24 +177,32 @@ class GeoController extends Controller
      *     summary="Get municipality statistics",
      *     description="Returns detailed statistics for a specific municipality",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="municipio",
      *         in="path",
      *         description="Municipality ID",
      *         required=true,
+     *
      *         @OA\Schema(type="integer", example=123)
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Successful operation",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="data", type="object")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=404,
      *         description="Municipality not found",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="error", type="string")
      *         )
      *     )
@@ -181,13 +210,13 @@ class GeoController extends Controller
      */
     public function municipioStats(Request $request, $municipio)
     {
-        $cacheKey = 'geo:stats:' . $municipio;
-        
+        $cacheKey = 'geo:stats:'.$municipio;
+
         $data = Cache::remember($cacheKey, 1800, function () use ($municipio) {
             return $this->repository->getMunicipioStats($municipio);
         });
 
-        if (!$data) {
+        if (! $data) {
             return response()->json(['error' => 'Municipio not found'], 404);
         }
 
@@ -202,17 +231,22 @@ class GeoController extends Controller
      *     summary="Compare geographic areas",
      *     description="Compare fuel prices across multiple states or municipalities",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\RequestBody(
      *         required=true,
+     *
      *         @OA\JsonContent(
      *             required={"areas"},
+     *
      *             @OA\Property(
      *                 property="areas",
      *                 type="array",
      *                 minItems=2,
+     *
      *                 @OA\Items(
      *                     type="object",
      *                     required={"type", "id"},
+     *
      *                     @OA\Property(property="type", type="string", enum={"estado", "municipio"}),
      *                     @OA\Property(property="id", type="integer")
      *                 )
@@ -220,14 +254,18 @@ class GeoController extends Controller
      *             @OA\Property(
      *                 property="fuel_types",
      *                 type="array",
+     *
      *                 @OA\Items(type="string", enum={"regular", "premium", "diesel"})
      *             )
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Successful operation",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="data", type="object")
      *         )
      *     )
@@ -240,14 +278,14 @@ class GeoController extends Controller
             'areas.*.type' => 'required|in:estado,municipio',
             'areas.*.id' => 'required|integer',
             'fuel_types' => 'array',
-            'fuel_types.*' => 'in:regular,premium,diesel'
+            'fuel_types.*' => 'in:regular,premium,diesel',
         ]);
 
         $areas = $request->input('areas');
         $fuelTypes = $request->input('fuel_types', ['regular', 'premium', 'diesel']);
-        
-        $cacheKey = 'geo:compare:' . md5(json_encode([$areas, $fuelTypes]));
-        
+
+        $cacheKey = 'geo:compare:'.md5(json_encode([$areas, $fuelTypes]));
+
         $data = Cache::remember($cacheKey, 1800, function () use ($areas, $fuelTypes) {
             return $this->comparisonService->compareAreas($areas, $fuelTypes);
         });
@@ -263,52 +301,67 @@ class GeoController extends Controller
      *     summary="Get price heatmap data",
      *     description="Returns heatmap data for fuel prices within geographic bounds",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Parameter(
      *         name="north",
      *         in="query",
      *         description="Northern boundary latitude",
      *         required=true,
+     *
      *         @OA\Schema(type="number", format="float", minimum=-90, maximum=90)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="south",
      *         in="query",
      *         description="Southern boundary latitude",
      *         required=true,
+     *
      *         @OA\Schema(type="number", format="float", minimum=-90, maximum=90)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="east",
      *         in="query",
      *         description="Eastern boundary longitude",
      *         required=true,
+     *
      *         @OA\Schema(type="number", format="float", minimum=-180, maximum=180)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="west",
      *         in="query",
      *         description="Western boundary longitude",
      *         required=true,
+     *
      *         @OA\Schema(type="number", format="float", minimum=-180, maximum=180)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="zoom",
      *         in="query",
      *         description="Map zoom level",
      *         required=true,
+     *
      *         @OA\Schema(type="integer", minimum=1, maximum=20)
      *     ),
+     *
      *     @OA\Parameter(
      *         name="fuel_type",
      *         in="query",
      *         description="Fuel type for heatmap",
      *         required=false,
+     *
      *         @OA\Schema(type="string", enum={"regular", "premium", "diesel"}, default="regular")
      *     ),
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Successful operation",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="data", type="object")
      *         )
      *     )
@@ -322,13 +375,13 @@ class GeoController extends Controller
             'east' => 'required|numeric|between:-180,180',
             'west' => 'required|numeric|between:-180,180',
             'zoom' => 'required|integer|between:1,20',
-            'fuel_type' => 'in:regular,premium,diesel'
+            'fuel_type' => 'in:regular,premium,diesel',
         ]);
 
         $bounds = $request->only(['north', 'south', 'east', 'west']);
         $zoomLevel = $request->input('zoom');
         $fuelType = $request->input('fuel_type', 'regular');
-        
+
         $cacheKey = sprintf(
             'geo:heatmap:%s:%s:%s:%s:%d:%s',
             $bounds['north'],
@@ -338,7 +391,7 @@ class GeoController extends Controller
             $zoomLevel,
             $fuelType
         );
-        
+
         $data = Cache::remember($cacheKey, 1800, function () use ($bounds, $zoomLevel, $fuelType) {
             return $this->heatMapService->generateHeatMap($bounds, $zoomLevel, $fuelType);
         });

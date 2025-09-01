@@ -2,8 +2,8 @@
 
 namespace App\Jobs;
 
-use App\Services\Telegram\AnalyticsService;
 use App\Repositories\AnalyticsRepository;
+use App\Services\Telegram\AnalyticsService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Generate Analytics Job
- * 
+ *
  * Background job for pre-generating and caching analytics data
  * to improve response times for user queries.
  */
@@ -24,9 +24,11 @@ class GenerateAnalyticsJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $tries;
+
     public $backoff;
-    
+
     private string $stationNumero;
+
     private array $analyticsTypes;
 
     /**
@@ -51,15 +53,16 @@ class GenerateAnalyticsJob implements ShouldQueue
         try {
             Log::info('GenerateAnalyticsJob started', [
                 'station_numero' => $this->stationNumero,
-                'types' => $this->analyticsTypes
+                'types' => $this->analyticsTypes,
             ]);
 
             $station = \App\Models\Station::where('numero', $this->stationNumero)->first();
-            
-            if (!$station) {
+
+            if (! $station) {
                 Log::warning('Station not found for analytics generation', [
-                    'station_numero' => $this->stationNumero
+                    'station_numero' => $this->stationNumero,
                 ]);
+
                 return;
             }
 
@@ -69,15 +72,15 @@ class GenerateAnalyticsJob implements ShouldQueue
                     case 'trends':
                         $this->generateTrendAnalytics($station, $analyticsService);
                         break;
-                        
+
                     case 'ranking':
                         $this->generateRankingAnalytics($station, $analyticsService);
                         break;
-                        
+
                     case 'history':
                         $this->generateHistoryAnalytics($station, $analyticsService);
                         break;
-                        
+
                     case 'volatility':
                         $this->generateVolatilityAnalytics($station, $analyticsRepository);
                         break;
@@ -86,16 +89,16 @@ class GenerateAnalyticsJob implements ShouldQueue
 
             Log::info('Analytics generated and cached', [
                 'station_numero' => $this->stationNumero,
-                'types' => $this->analyticsTypes
+                'types' => $this->analyticsTypes,
             ]);
 
         } catch (\Exception $e) {
             Log::error('GenerateAnalyticsJob failed', [
                 'station_numero' => $this->stationNumero,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             throw $e; // Re-throw for retry mechanism
         }
     }
@@ -108,7 +111,7 @@ class GenerateAnalyticsJob implements ShouldQueue
         // Generate for different time periods
         $timePeriods = Config::get('analytics.time_periods');
         $defaultRadius = Config::get('analytics.radius.default');
-        
+
         foreach ($timePeriods as $periodName => $days) {
             $trends = $analyticsService->getPriceTrends(
                 $station->numero,
@@ -130,9 +133,9 @@ class GenerateAnalyticsJob implements ShouldQueue
         $radiusValues = [
             Config::get('analytics.radius.small'),
             Config::get('analytics.radius.medium'),
-            Config::get('analytics.radius.large')
+            Config::get('analytics.radius.large'),
         ];
-        
+
         foreach ($radiusValues as $radiusKm) {
             $ranking = $analyticsService->getCompetitorRanking(
                 $station->numero,
@@ -173,10 +176,10 @@ class GenerateAnalyticsJob implements ShouldQueue
         // Get nearby stations for volatility comparison
         $nearbyStations = \App\Models\Station::select('numero')
             ->where('is_active', true)
-            ->whereRaw("(6371 * acos(cos(radians(?)) * cos(radians(lat)) * 
+            ->whereRaw('(6371 * acos(cos(radians(?)) * cos(radians(lat)) * 
                        cos(radians(lng) - radians(?)) + sin(radians(?)) * 
-                       sin(radians(lat)))) <= ?", 
-                       [$station->lat, $station->lng, $station->lat, Config::get('analytics.radius.default')])
+                       sin(radians(lat)))) <= ?',
+                [$station->lat, $station->lng, $station->lat, Config::get('analytics.radius.default')])
             ->pluck('numero')
             ->toArray();
 
@@ -206,7 +209,7 @@ class GenerateAnalyticsJob implements ShouldQueue
         Log::error('GenerateAnalyticsJob permanently failed', [
             'station_numero' => $this->stationNumero,
             'types' => $this->analyticsTypes,
-            'error' => $exception->getMessage()
+            'error' => $exception->getMessage(),
         ]);
     }
 }

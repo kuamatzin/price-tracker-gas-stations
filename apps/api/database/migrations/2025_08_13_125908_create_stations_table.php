@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('brand', 50)->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
-            
+
             $table->foreign('entidad_id')->references('id')->on('entidades');
             $table->foreign('municipio_id')->references('id')->on('municipios');
             $table->index(['entidad_id', 'municipio_id'], 'idx_location');

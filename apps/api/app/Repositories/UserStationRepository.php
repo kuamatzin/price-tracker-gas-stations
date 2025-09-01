@@ -26,7 +26,7 @@ class UserStationRepository
                 's.lng',
                 's.brand',
                 's.municipio_id',
-                'm.nombre as municipio_nombre'
+                'm.nombre as municipio_nombre',
             ])
             ->where('us.user_id', $userId)
             ->where('s.is_active', true)
@@ -52,22 +52,23 @@ class UserStationRepository
     public function setDefaultStation(int $userId, int $userStationId): bool
     {
         DB::beginTransaction();
-        
+
         try {
             // Clear existing defaults
             DB::table('user_stations')
                 ->where('user_id', $userId)
                 ->update(['is_default' => false]);
-            
+
             // Set new default
             DB::table('user_stations')
                 ->where('id', $userStationId)
                 ->where('user_id', $userId)
                 ->update(['is_default' => true]);
-            
+
             DB::commit();
+
             return true;
-            
+
         } catch (\Exception $e) {
             DB::rollBack();
             throw $e;
@@ -84,19 +85,19 @@ class UserStationRepository
         if ($existing) {
             throw new \Exception("Ya tienes una estación registrada con el alias '{$alias}'");
         }
-        
+
         // Check if this is the first station for the user
         $isFirstStation = DB::table('user_stations')
             ->where('user_id', $userId)
             ->count() === 0;
-        
+
         return DB::table('user_stations')->insertGetId([
             'user_id' => $userId,
             'station_numero' => $stationNumero,
             'alias' => $alias,
             'is_default' => $isFirstStation, // Auto-set as default if first station
             'created_at' => now(),
-            'updated_at' => now()
+            'updated_at' => now(),
         ]);
     }
 

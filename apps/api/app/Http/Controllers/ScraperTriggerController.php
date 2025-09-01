@@ -6,7 +6,6 @@ use App\Jobs\TriggerScraperJob;
 use App\Services\ScraperRunService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -30,7 +29,7 @@ class ScraperTriggerController extends Controller
         $force = $validated['force'] ?? false;
 
         // Check if a scraper is already running (unless forced)
-        if (!$force) {
+        if (! $force) {
             $recentRun = \App\Models\ScraperRun::where('status', 'running')
                 ->where('started_at', '>=', now()->subHours(2))
                 ->first();
@@ -71,7 +70,7 @@ class ScraperTriggerController extends Controller
     public function status(): JsonResponse
     {
         $freshness = $this->scraperRunService->getDataFreshness();
-        
+
         $lastRun = \App\Models\ScraperRun::orderBy('created_at', 'desc')->first();
         $runningRun = \App\Models\ScraperRun::where('status', 'running')->first();
 
@@ -97,7 +96,7 @@ class ScraperTriggerController extends Controller
             $status['current_run'] = [
                 'id' => $runningRun->id,
                 'started_at' => $runningRun->started_at?->toIso8601String(),
-                'elapsed_seconds' => $runningRun->started_at ? 
+                'elapsed_seconds' => $runningRun->started_at ?
                     now()->diffInSeconds($runningRun->started_at) : null,
             ];
         }

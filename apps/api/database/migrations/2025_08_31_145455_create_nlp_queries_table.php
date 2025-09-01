@@ -26,7 +26,7 @@ return new class extends Migration
             $table->boolean('success')->nullable();
             $table->jsonb('fallback_suggested')->nullable();
             $table->timestamps();
-            
+
             // Indexes
             $table->index('user_id');
             $table->index('chat_id');
@@ -34,7 +34,7 @@ return new class extends Migration
             $table->index('confidence');
             $table->index('created_at');
             $table->index(['used_deepseek', 'created_at']);
-            
+
             // Foreign key
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });

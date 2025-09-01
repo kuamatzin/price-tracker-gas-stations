@@ -21,7 +21,7 @@ class Entidad extends Model
     {
         return $this->hasMany(Municipio::class, 'entidad_id', 'id');
     }
-    
+
     public function stations()
     {
         return $this->hasMany(Station::class, 'entidad_id', 'id');

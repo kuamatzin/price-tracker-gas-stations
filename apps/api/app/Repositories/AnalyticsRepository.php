@@ -2,14 +2,14 @@
 
 namespace App\Repositories;
 
+use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 /**
  * Analytics Repository
- * 
+ *
  * Handles all database operations for analytics data including
  * trend analysis, market statistics, and competitive positioning.
  */
@@ -32,7 +32,7 @@ class AnalyticsRepository
                 DB::raw('MIN(pc.price) as min_price'),
                 DB::raw('MAX(pc.price) as max_price'),
                 DB::raw('COUNT(DISTINCT pc.station_numero) as station_count'),
-                DB::raw('COUNT(*) as change_count')
+                DB::raw('COUNT(*) as change_count'),
             ])
             ->whereIn('pc.station_numero', $stationNumeros)
             ->whereBetween('pc.changed_at', [$startDate, $endDate])
@@ -68,7 +68,7 @@ class AnalyticsRepository
                 's.nombre as station_name',
                 's.brand',
                 's.lat',
-                's.lng'
+                's.lng',
             ])
             ->join('stations as s', 's.numero', '=', 'pc.station_numero')
             ->whereIn('pc.station_numero', $stationNumeros)
@@ -118,10 +118,10 @@ class AnalyticsRepository
             DB::raw('MAX(pc.price) as maximum'),
             DB::raw('STDDEV(pc.price) as std_deviation'),
             DB::raw('COUNT(DISTINCT pc.station_numero) as station_count'),
-            DB::raw('COUNT(*) as total_changes')
+            DB::raw('COUNT(*) as total_changes'),
         ])
-        ->groupBy('pc.fuel_type')
-        ->get();
+            ->groupBy('pc.fuel_type')
+            ->get();
 
         $statistics = [];
         foreach ($data as $row) {
@@ -132,9 +132,9 @@ class AnalyticsRepository
                 'std_deviation' => round($row->std_deviation, 2),
                 'station_count' => $row->station_count,
                 'total_changes' => $row->total_changes,
-                'volatility' => $row->average > 0 
+                'volatility' => $row->average > 0
                     ? round(($row->std_deviation / $row->average) * 100, 2)
-                    : 0
+                    : 0,
             ];
         }
 
@@ -156,12 +156,12 @@ class AnalyticsRepository
                 'pc1.changed_at',
                 'pc2.price as old_price',
                 DB::raw('((pc1.price - pc2.price) / pc2.price * 100) as change_percentage'),
-                DB::raw('(pc1.price - pc2.price) as change_amount')
+                DB::raw('(pc1.price - pc2.price) as change_amount'),
             ])
             ->leftJoin('price_changes as pc2', function ($join) {
                 $join->on('pc2.station_numero', '=', 'pc1.station_numero')
-                     ->on('pc2.fuel_type', '=', 'pc1.fuel_type')
-                     ->on('pc2.id', '=', DB::raw('(
+                    ->on('pc2.fuel_type', '=', 'pc1.fuel_type')
+                    ->on('pc2.id', '=', DB::raw('(
                          SELECT MAX(id) FROM price_changes pc3
                          WHERE pc3.station_numero = pc1.station_numero
                          AND pc3.fuel_type = pc1.fuel_type
@@ -204,6 +204,7 @@ class AnalyticsRepository
         ?int $limit = null
     ): Collection {
         $limit = $limit ?? Config::get('analytics.limits.most_active_stations');
+
         return DB::table('price_changes as pc')
             ->join('stations as s', 's.numero', '=', 'pc.station_numero')
             ->select([
@@ -212,7 +213,7 @@ class AnalyticsRepository
                 's.brand',
                 DB::raw('COUNT(*) as change_count'),
                 DB::raw('COUNT(DISTINCT pc.fuel_type) as fuel_types_changed'),
-                DB::raw('MAX(pc.changed_at) as last_change')
+                DB::raw('MAX(pc.changed_at) as last_change'),
             ])
             ->where('s.municipio_id', $municipioId)
             ->where('s.is_active', true)
@@ -237,7 +238,7 @@ class AnalyticsRepository
                 DB::raw('COUNT(*) as change_count'),
                 DB::raw('AVG(price) as avg_price'),
                 DB::raw('STDDEV(price) as price_stddev'),
-                DB::raw('MAX(price) - MIN(price) as price_range')
+                DB::raw('MAX(price) - MIN(price) as price_range'),
             ])
             ->whereIn('station_numero', $stationNumeros)
             ->where('changed_at', '>=', now()->subDays($days))
@@ -246,17 +247,17 @@ class AnalyticsRepository
 
         $metrics = [];
         foreach ($data as $row) {
-            if (!isset($metrics[$row->fuel_type])) {
+            if (! isset($metrics[$row->fuel_type])) {
                 $metrics[$row->fuel_type] = [];
             }
-            
+
             $metrics[$row->fuel_type][$row->station_numero] = [
                 'change_frequency' => round($row->change_count / $days, 2),
                 'avg_price' => round($row->avg_price, 2),
-                'volatility' => $row->avg_price > 0 
+                'volatility' => $row->avg_price > 0
                     ? round(($row->price_stddev / $row->avg_price) * 100, 2)
                     : 0,
-                'price_range' => round($row->price_range, 2)
+                'price_range' => round($row->price_range, 2),
             ];
         }
 
@@ -275,10 +276,10 @@ class AnalyticsRepository
             ->select([
                 DB::raw('DATE(pc.changed_at) as date'),
                 'pc.fuel_type',
-                DB::raw("SUM(CASE WHEN pc.station_numero = ? THEN pc.price ELSE 0 END) as target_price"),
+                DB::raw('SUM(CASE WHEN pc.station_numero = ? THEN pc.price ELSE 0 END) as target_price'),
                 DB::raw('AVG(CASE WHEN pc.station_numero != ? THEN pc.price ELSE NULL END) as competitor_avg'),
                 DB::raw('MIN(CASE WHEN pc.station_numero != ? THEN pc.price ELSE NULL END) as competitor_min'),
-                DB::raw('MAX(CASE WHEN pc.station_numero != ? THEN pc.price ELSE NULL END) as competitor_max')
+                DB::raw('MAX(CASE WHEN pc.station_numero != ? THEN pc.price ELSE NULL END) as competitor_max'),
             ])
             ->addBinding([$stationNumero, $stationNumero, $stationNumero, $stationNumero], 'select')
             ->whereIn('pc.station_numero', array_merge([$stationNumero], $competitorNumeros))
@@ -310,17 +311,17 @@ class AnalyticsRepository
 
         $marketShare = [];
         $fuelTypes = Config::get('analytics.fuel_types');
-        
+
         foreach ($fuelTypes as $fuelType) {
             $fuelPrices = $prices->where('fuel_type', $fuelType);
-            
+
             if ($fuelPrices->isEmpty()) {
                 continue;
             }
 
             $targetPrice = $fuelPrices->where('station_numero', $stationNumero)->first();
-            
-            if (!$targetPrice) {
+
+            if (! $targetPrice) {
                 continue;
             }
 
@@ -328,7 +329,7 @@ class AnalyticsRepository
             $avgPrice = $fuelPrices->avg('price');
             $minPrice = $fuelPrices->min('price');
             $maxPrice = $fuelPrices->max('price');
-            
+
             if ($maxPrice == $minPrice) {
                 $marketShare[$fuelType] = round(100 / $fuelPrices->count(), 1);
             } else {
@@ -344,22 +345,20 @@ class AnalyticsRepository
 
     /**
      * Create indexes for performance optimization
-     * 
-     * @return void
      */
     public function createIndexes(): void
     {
         // Check if we're using PostgreSQL or MySQL to use appropriate syntax
         $driver = DB::connection()->getDriverName();
-        
+
         if ($driver === 'pgsql') {
             // PostgreSQL syntax
             DB::statement('CREATE INDEX IF NOT EXISTS idx_price_changes_trend 
                           ON price_changes(station_numero, fuel_type, changed_at DESC)');
-            
+
             DB::statement('CREATE INDEX IF NOT EXISTS idx_price_changes_latest 
                           ON price_changes(station_numero, fuel_type, id DESC)');
-            
+
             DB::statement('CREATE INDEX IF NOT EXISTS idx_price_changes_date 
                           ON price_changes(changed_at, station_numero, fuel_type)');
         } else {
@@ -370,14 +369,14 @@ class AnalyticsRepository
             } catch (\Exception $e) {
                 // Index already exists, ignore
             }
-            
+
             try {
                 DB::statement('CREATE INDEX idx_price_changes_latest 
                               ON price_changes(station_numero, fuel_type, id DESC)');
             } catch (\Exception $e) {
                 // Index already exists, ignore
             }
-            
+
             try {
                 DB::statement('CREATE INDEX idx_price_changes_date 
                               ON price_changes(changed_at, station_numero, fuel_type)');

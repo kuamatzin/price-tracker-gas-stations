@@ -5,15 +5,12 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redis;
-use Illuminate\Support\Facades\RateLimiter;
 
 class RateLimitHeaders
 {
     /**
      * Handle an incoming request.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure  $next
      * @return mixed
      */
     public function handle(Request $request, Closure $next)
@@ -21,7 +18,7 @@ class RateLimitHeaders
         $response = $next($request);
 
         // Only add headers for authenticated API requests
-        if (!$request->user() || !$request->is('api/*')) {
+        if (! $request->user() || ! $request->is('api/*')) {
             return $response;
         }
 
@@ -33,18 +30,18 @@ class RateLimitHeaders
             'free' => 100,
             'basic' => 500,
             'premium' => 1000,
-            'enterprise' => 10000
+            'enterprise' => 10000,
         ]);
 
         $limit = $limits[$tier] ?? $limits['free'];
-        
+
         // Create a unique key for the user's rate limit
-        $key = 'rate_limit:' . $user->id . ':' . now()->format('Y-m-d-H');
-        
+        $key = 'rate_limit:'.$user->id.':'.now()->format('Y-m-d-H');
+
         // Get current usage count
         $current = (int) Redis::get($key) ?? 0;
         $remaining = max(0, $limit - $current);
-        
+
         // Calculate reset time (next hour)
         $resetTime = now()->addHour()->startOfHour();
 
@@ -52,7 +49,7 @@ class RateLimitHeaders
         $response->headers->set('X-RateLimit-Limit', $limit);
         $response->headers->set('X-RateLimit-Remaining', $remaining);
         $response->headers->set('X-RateLimit-Reset', $resetTime->timestamp);
-        
+
         // Add tier information
         $response->headers->set('X-RateLimit-Tier', $tier);
 
@@ -63,7 +60,7 @@ class RateLimitHeaders
 
         // Add usage percentage for convenience
         $usagePercent = round(($current / $limit) * 100, 2);
-        $response->headers->set('X-RateLimit-Usage', $usagePercent . '%');
+        $response->headers->set('X-RateLimit-Usage', $usagePercent.'%');
 
         return $response;
     }

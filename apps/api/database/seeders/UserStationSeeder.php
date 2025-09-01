@@ -2,10 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\Station;
 use App\Models\User;
 use App\Models\UserStation;
-use App\Models\Station;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -33,7 +32,7 @@ class UserStationSeeder extends Seeder
 
         // Get a random station or create one if none exist
         $station = Station::first();
-        
+
         if ($station) {
             // Create user-station association
             UserStation::firstOrCreate([
@@ -44,7 +43,7 @@ class UserStationSeeder extends Seeder
 
             $this->command->info("Created user-station association for user: {$user->email} with station: {$station->numero}");
         } else {
-            $this->command->warn("No stations found in database. Please seed stations first.");
+            $this->command->warn('No stations found in database. Please seed stations first.');
         }
     }
 }

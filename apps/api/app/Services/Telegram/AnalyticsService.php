@@ -12,13 +12,14 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Analytics Service Implementation
- * 
+ *
  * Provides comprehensive analytics for gas station pricing including
  * trend analysis, competitor ranking, and historical data analysis.
  */
 class AnalyticsService implements AnalyticsServiceInterface
 {
     private PriceRepository $priceRepository;
+
     private StationRepository $stationRepository;
 
     public function __construct(
@@ -40,11 +41,11 @@ class AnalyticsService implements AnalyticsServiceInterface
         $radiusKm = $radiusKm ?? Config::get('analytics.radius.default');
         $cacheKey = "analytics:trends:{$stationNumero}:{$days}:{$radiusKm}";
         $cacheTtl = Config::get('analytics.cache.trends_ttl');
-        
+
         return Cache::remember($cacheKey, $cacheTtl, function () use ($stationNumero, $days, $radiusKm) {
             $station = $this->stationRepository->getByNumero($stationNumero);
-            
-            if (!$station) {
+
+            if (! $station) {
                 return [];
             }
 
@@ -69,7 +70,7 @@ class AnalyticsService implements AnalyticsServiceInterface
                     DB::raw('AVG(pc.price) as avg_price'),
                     DB::raw('MIN(pc.price) as min_price'),
                     DB::raw('MAX(pc.price) as max_price'),
-                    DB::raw('COUNT(DISTINCT pc.station_numero) as station_count')
+                    DB::raw('COUNT(DISTINCT pc.station_numero) as station_count'),
                 ])
                 ->whereIn('pc.station_numero', $stationNumeros)
                 ->whereBetween('pc.changed_at', [$startDate, $endDate])
@@ -86,10 +87,10 @@ class AnalyticsService implements AnalyticsServiceInterface
             // Organize by fuel type
             $trends = [];
             $fuelTypes = Config::get('analytics.fuel_types');
-            
+
             foreach ($fuelTypes as $fuelType) {
                 $fuelData = $dailyPrices->where('fuel_type', $fuelType);
-                
+
                 if ($fuelData->isEmpty()) {
                     continue;
                 }
@@ -97,7 +98,7 @@ class AnalyticsService implements AnalyticsServiceInterface
                 $prices = $fuelData->pluck('avg_price')->toArray();
                 $firstPrice = $prices[0] ?? 0;
                 $lastPrice = end($prices) ?: 0;
-                
+
                 $trends[$fuelType] = [
                     'daily_prices' => $fuelData->map(function ($item) {
                         return [
@@ -105,15 +106,15 @@ class AnalyticsService implements AnalyticsServiceInterface
                             'avg_price' => round($item->avg_price, 2),
                             'min_price' => round($item->min_price, 2),
                             'max_price' => round($item->max_price, 2),
-                            'station_count' => $item->station_count
+                            'station_count' => $item->station_count,
                         ];
                     })->toArray(),
                     'change_amount' => round($lastPrice - $firstPrice, 2),
-                    'change_percentage' => $firstPrice > 0 
+                    'change_percentage' => $firstPrice > 0
                         ? round((($lastPrice - $firstPrice) / $firstPrice) * 100, 2)
                         : 0,
                     'trend_direction' => $this->getTrendDirection($prices),
-                    'statistics' => $this->calculateStatistics($prices)
+                    'statistics' => $this->calculateStatistics($prices),
                 ];
             }
 
@@ -122,7 +123,7 @@ class AnalyticsService implements AnalyticsServiceInterface
                 'area_radius_km' => $radiusKm,
                 'days' => $days,
                 'trends' => $trends,
-                'generated_at' => now()->toIso8601String()
+                'generated_at' => now()->toIso8601String(),
             ];
         });
     }
@@ -137,11 +138,11 @@ class AnalyticsService implements AnalyticsServiceInterface
         $radiusKm = $radiusKm ?? Config::get('analytics.radius.default');
         $cacheKey = "analytics:ranking:{$stationNumero}:{$radiusKm}";
         $cacheTtl = Config::get('analytics.cache.ranking_ttl');
-        
+
         return Cache::remember($cacheKey, $cacheTtl, function () use ($stationNumero, $radiusKm) {
             $station = $this->stationRepository->getByNumero($stationNumero);
-            
-            if (!$station) {
+
+            if (! $station) {
                 return [];
             }
 
@@ -162,7 +163,7 @@ class AnalyticsService implements AnalyticsServiceInterface
                     'pc.fuel_type',
                     'pc.price',
                     's.nombre as station_name',
-                    's.brand'
+                    's.brand',
                 ])
                 ->join('stations as s', 's.numero', '=', 'pc.station_numero')
                 ->whereIn('pc.station_numero', $stationNumeros)
@@ -178,7 +179,7 @@ class AnalyticsService implements AnalyticsServiceInterface
             // Calculate rankings by fuel type
             $rankings = [];
             $fuelTypes = Config::get('analytics.fuel_types');
-            
+
             foreach ($fuelTypes as $fuelType) {
                 $fuelPrices = $currentPrices->where('fuel_type', $fuelType)
                     ->sortBy('price')
@@ -190,8 +191,8 @@ class AnalyticsService implements AnalyticsServiceInterface
 
                 $totalCompetitors = $fuelPrices->count();
                 $targetPrice = $fuelPrices->where('station_numero', $stationNumero)->first();
-                
-                if (!$targetPrice) {
+
+                if (! $targetPrice) {
                     continue;
                 }
 
@@ -215,7 +216,7 @@ class AnalyticsService implements AnalyticsServiceInterface
                         'station_name' => $item->station_name,
                         'brand' => $item->brand,
                         'price' => round($item->price, 2),
-                        'is_target' => $item->station_numero === $stationNumero
+                        'is_target' => $item->station_numero === $stationNumero,
                     ];
                 })->toArray();
 
@@ -227,7 +228,7 @@ class AnalyticsService implements AnalyticsServiceInterface
                     'market_average' => $stats['average'],
                     'market_median' => $stats['median'],
                     'price_difference_from_avg' => round($targetPrice->price - $stats['average'], 2),
-                    'price_difference_percentage' => $stats['average'] > 0 
+                    'price_difference_percentage' => $stats['average'] > 0
                         ? round((($targetPrice->price - $stats['average']) / $stats['average']) * 100, 2)
                         : 0,
                     'top_competitors' => $topCompetitors,
@@ -236,7 +237,7 @@ class AnalyticsService implements AnalyticsServiceInterface
                         $totalCompetitors,
                         $targetPrice->price,
                         $stats['average']
-                    )
+                    ),
                 ];
             }
 
@@ -244,7 +245,7 @@ class AnalyticsService implements AnalyticsServiceInterface
                 'station_numero' => $stationNumero,
                 'radius_km' => $radiusKm,
                 'rankings' => $rankings,
-                'generated_at' => now()->toIso8601String()
+                'generated_at' => now()->toIso8601String(),
             ];
         });
     }
@@ -257,9 +258,9 @@ class AnalyticsService implements AnalyticsServiceInterface
         int $days = 7,
         ?string $fuelType = null
     ): array {
-        $cacheKey = "analytics:history:{$stationNumero}:{$days}:" . ($fuelType ?? 'all');
+        $cacheKey = "analytics:history:{$stationNumero}:{$days}:".($fuelType ?? 'all');
         $cacheTtl = Config::get('analytics.cache.history_ttl');
-        
+
         return Cache::remember($cacheKey, $cacheTtl, function () use ($stationNumero, $days, $fuelType) {
             $query = DB::table('price_changes')
                 ->where('station_numero', $stationNumero)
@@ -281,6 +282,7 @@ class AnalyticsService implements AnalyticsServiceInterface
                     return \Carbon\Carbon::parse($item->changed_at)->format('Y-m-d');
                 })->map(function ($dayChanges) {
                     $prices = $dayChanges->pluck('price')->toArray();
+
                     return [
                         'date' => $dayChanges->first()->changed_at,
                         'changes_count' => count($prices),
@@ -288,7 +290,7 @@ class AnalyticsService implements AnalyticsServiceInterface
                         'last_price' => round(end($prices), 2),
                         'min_price' => round(min($prices), 2),
                         'max_price' => round(max($prices), 2),
-                        'avg_price' => round(array_sum($prices) / count($prices), 2)
+                        'avg_price' => round(array_sum($prices) / count($prices), 2),
                     ];
                 });
 
@@ -299,7 +301,7 @@ class AnalyticsService implements AnalyticsServiceInterface
                     'daily_history' => $dailyPrices->values()->toArray(),
                     'total_changes' => count($allPrices),
                     'statistics' => $stats,
-                    'trend_direction' => $this->getTrendDirection($allPrices)
+                    'trend_direction' => $this->getTrendDirection($allPrices),
                 ];
             }
 
@@ -308,15 +310,15 @@ class AnalyticsService implements AnalyticsServiceInterface
                 'days' => $days,
                 'fuel_type' => $fuelType,
                 'history' => $history,
-                'generated_at' => now()->toIso8601String()
+                'generated_at' => now()->toIso8601String(),
             ];
         });
     }
 
     /**
      * Calculate statistical metrics for a price array
-     * 
-     * @param array $prices Array of price values
+     *
+     * @param  array  $prices  Array of price values
      * @return array Statistical metrics including average, median, std deviation
      */
     private function calculateStatistics(array $prices): array
@@ -327,13 +329,13 @@ class AnalyticsService implements AnalyticsServiceInterface
                 'median' => 0,
                 'std_deviation' => 0,
                 'min' => 0,
-                'max' => 0
+                'max' => 0,
             ];
         }
 
         $count = count($prices);
         $average = array_sum($prices) / $count;
-        
+
         // Calculate median
         sort($prices);
         $median = $count % 2 === 0
@@ -352,14 +354,14 @@ class AnalyticsService implements AnalyticsServiceInterface
             'median' => round($median, 2),
             'std_deviation' => round($stdDeviation, 2),
             'min' => round(min($prices), 2),
-            'max' => round(max($prices), 2)
+            'max' => round(max($prices), 2),
         ];
     }
 
     /**
      * Determine trend direction from price array
-     * 
-     * @param array $prices Array of price values over time
+     *
+     * @param  array  $prices  Array of price values over time
      * @return string Trend direction: 'rising', 'falling', or 'stable'
      */
     private function getTrendDirection(array $prices): string
@@ -388,11 +390,11 @@ class AnalyticsService implements AnalyticsServiceInterface
 
     /**
      * Get nearby stations within specified radius
-     * 
-     * @param float $lat Latitude coordinate
-     * @param float $lng Longitude coordinate  
-     * @param float $radiusKm Search radius in kilometers
-     * @param string|null $excludeNumero Station to exclude from results
+     *
+     * @param  float  $lat  Latitude coordinate
+     * @param  float  $lng  Longitude coordinate
+     * @param  float  $radiusKm  Search radius in kilometers
+     * @param  string|null  $excludeNumero  Station to exclude from results
      * @return Collection Collection of nearby stations
      */
     private function getNearbyStations(
@@ -408,9 +410,9 @@ class AnalyticsService implements AnalyticsServiceInterface
                 'brand',
                 'lat',
                 'lng',
-                DB::raw("(6371 * acos(cos(radians(?)) * cos(radians(lat)) * 
+                DB::raw('(6371 * acos(cos(radians(?)) * cos(radians(lat)) * 
                         cos(radians(lng) - radians(?)) + sin(radians(?)) * 
-                        sin(radians(lat)))) as distance")
+                        sin(radians(lat)))) as distance'),
             ])
             ->addBinding([$lat, $lng, $lat], 'select')
             ->where('is_active', true)
@@ -425,11 +427,11 @@ class AnalyticsService implements AnalyticsServiceInterface
 
     /**
      * Generate ranking recommendation based on competitive position
-     * 
-     * @param int $position Current ranking position (1-based)
-     * @param int $total Total number of competitors
-     * @param float $yourPrice Station's current price
-     * @param float $avgPrice Market average price
+     *
+     * @param  int  $position  Current ranking position (1-based)
+     * @param  int  $total  Total number of competitors
+     * @param  float  $yourPrice  Station's current price
+     * @param  float  $avgPrice  Market average price
      * @return string Localized recommendation message
      */
     private function generateRankingRecommendation(
@@ -441,30 +443,30 @@ class AnalyticsService implements AnalyticsServiceInterface
         $percentile = ($total - $position + 1) / $total * 100;
         $priceDiff = $yourPrice - $avgPrice;
         $priceDiffPercent = abs($priceDiff / $avgPrice * 100);
-        
+
         $excellentThreshold = Config::get('analytics.thresholds.excellent_percentile');
         $goodThreshold = Config::get('analytics.thresholds.good_percentile');
         $weakThreshold = Config::get('analytics.thresholds.weak_percentile');
 
         if ($percentile >= $excellentThreshold) {
-            return "Excelente posición competitiva. Mantenga su estrategia actual.";
+            return 'Excelente posición competitiva. Mantenga su estrategia actual.';
         } elseif ($percentile >= $goodThreshold) {
             if ($priceDiff > 0) {
                 return sprintf(
-                    "Posición media. Considere reducir $%.2f para mejorar competitividad.",
+                    'Posición media. Considere reducir $%.2f para mejorar competitividad.',
                     $priceDiff
                 );
             } else {
-                return "Buena posición. Monitor competidores cercanos.";
+                return 'Buena posición. Monitor competidores cercanos.';
             }
         } elseif ($percentile >= $weakThreshold) {
             return sprintf(
-                "Posición débil. Su precio está %.1f%% sobre el promedio. Ajuste recomendado.",
+                'Posición débil. Su precio está %.1f%% sobre el promedio. Ajuste recomendado.',
                 $priceDiffPercent
             );
         } else {
             return sprintf(
-                "Posición crítica. Reduzca $%.2f urgentemente para recuperar competitividad.",
+                'Posición crítica. Reduzca $%.2f urgentemente para recuperar competitividad.',
                 $priceDiff
             );
         }
