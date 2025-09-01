@@ -63,6 +63,9 @@ class SparklineGenerator
      */
     private function createSparkline(array $values): string
     {
+        // Validate and clean input values
+        $values = $this->validateValues($values);
+        
         if (count($values) < 2) {
             return str_repeat(self::SPARK_CHARS[3], max(1, count($values)));
         }
@@ -256,5 +259,15 @@ class SparklineGenerator
         }
 
         return $this->createSparkline($values);
+    }
+    
+    /**
+     * Validate and clean input values
+     */
+    private function validateValues(array $values): array
+    {
+        return array_values(array_filter($values, function($value) {
+            return is_numeric($value) && !is_nan($value) && !is_infinite($value);
+        }));
     }
 }
