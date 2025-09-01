@@ -25,7 +25,7 @@ class PriceCollection extends ResourceCollection
     public function with(Request $request): array
     {
         $meta = [];
-        
+
         if ($this->resource instanceof \Illuminate\Pagination\LengthAwarePaginator) {
             $meta = [
                 'current_page' => $this->resource->currentPage(),
@@ -35,17 +35,17 @@ class PriceCollection extends ResourceCollection
                 'from' => $this->resource->firstItem(),
                 'to' => $this->resource->lastItem(),
             ];
-            
+
             $links = [
                 'first' => $this->resource->url(1),
                 'last' => $this->resource->url($this->resource->lastPage()),
                 'next' => $this->resource->nextPageUrl(),
                 'prev' => $this->resource->previousPageUrl(),
             ];
-            
+
             return compact('meta', 'links');
         }
-        
+
         return [];
     }
 }

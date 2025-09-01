@@ -34,7 +34,7 @@ class ApiToken extends Model
     public static function generate(string $name, array $abilities = ['*'], ?int $expiresInDays = null): self
     {
         $token = Str::random(60);
-        
+
         return self::create([
             'name' => $name,
             'token' => hash('sha256', $token),
@@ -49,7 +49,7 @@ class ApiToken extends Model
     public static function findByToken(string $plainToken): ?self
     {
         $hashedToken = hash('sha256', $plainToken);
-        
+
         return self::where('token', $hashedToken)
             ->where(function ($query) {
                 $query->whereNull('expires_at')

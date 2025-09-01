@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 class PriceChangeFactory extends Factory
 {
     protected $model = PriceChange::class;
-    
+
     /**
      * Define the model's default state.
      *
@@ -23,9 +23,9 @@ class PriceChangeFactory extends Factory
         $subproductos = [
             'regular' => 'Gasolina Regular',
             'premium' => 'Gasolina Premium',
-            'diesel' => 'Diésel'
+            'diesel' => 'Diésel',
         ];
-        
+
         return [
             'station_numero' => $this->faker->numerify('#####'),
             'fuel_type' => $fuelType,

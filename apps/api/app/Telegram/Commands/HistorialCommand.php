@@ -5,16 +5,19 @@ namespace App\Telegram\Commands;
 use App\Services\Telegram\AnalyticsService;
 use App\Services\Telegram\PricingService;
 use App\Services\Telegram\TableFormatter;
-use Telegram\Bot\Commands\Command;
 use Carbon\Carbon;
+use Telegram\Bot\Commands\Command;
 
 class HistorialCommand extends Command
 {
     protected string $name = 'historial';
+
     protected string $description = 'Ver historial de precios de tu estación';
-    
+
     private AnalyticsService $analyticsService;
+
     private PricingService $pricingService;
+
     private TableFormatter $tableFormatter;
 
     public function __construct(
@@ -30,23 +33,24 @@ class HistorialCommand extends Command
     public function handle(): void
     {
         $chatId = $this->getUpdate()->getMessage()->getChat()->getId();
-        
+
         try {
             $userId = $this->getUserId($chatId);
         } catch (\Exception $e) {
             $this->replyWithMessage([
-                'text' => "❌ Usuario no registrado. Usa /start para registrarte."
+                'text' => '❌ Usuario no registrado. Usa /start para registrarte.',
             ]);
+
             return;
         }
-        
+
         $arguments = $this->getArguments();
 
         // Parse arguments
         $stationAlias = null;
         $days = 7; // Default
         $fuelType = null;
-        
+
         foreach ($arguments as $arg) {
             $lowerArg = strtolower($arg);
             if (in_array($lowerArg, ['regular', 'premium', 'diesel'])) {
@@ -62,32 +66,34 @@ class HistorialCommand extends Command
             // Send typing action
             $this->telegram->sendChatAction([
                 'chat_id' => $chatId,
-                'action' => 'typing'
+                'action' => 'typing',
             ]);
 
             $userStations = $this->pricingService->getUserStations($userId);
 
             if ($userStations->isEmpty()) {
                 $this->replyWithMessage([
-                    'text' => "❌ No tienes estaciones registradas.\n\nUsa /registrar para agregar tu primera estación."
+                    'text' => "❌ No tienes estaciones registradas.\n\nUsa /registrar para agregar tu primera estación.",
                 ]);
+
                 return;
             }
 
             // Determine which station to use
             $selectedStation = $this->selectStation($userStations, $stationAlias);
-            
-            if (!$selectedStation) {
+
+            if (! $selectedStation) {
                 if ($stationAlias) {
                     $this->replyWithMessage([
-                        'text' => "❌ No encontré la estación '$stationAlias'.\n\n" .
-                                 "Tus estaciones: " . $userStations->pluck('alias')->implode(', ')
+                        'text' => "❌ No encontré la estación '$stationAlias'.\n\n".
+                                 'Tus estaciones: '.$userStations->pluck('alias')->implode(', '),
                     ]);
                 } else {
                     $this->replyWithMessage([
-                        'text' => "❌ No se pudo determinar la estación. Especifica un alias."
+                        'text' => '❌ No se pudo determinar la estación. Especifica un alias.',
                     ]);
                 }
+
                 return;
             }
 
@@ -100,8 +106,9 @@ class HistorialCommand extends Command
 
             if (empty($history['history'])) {
                 $this->replyWithMessage([
-                    'text' => "❌ No hay historial de precios disponible para el período seleccionado."
+                    'text' => '❌ No hay historial de precios disponible para el período seleccionado.',
                 ]);
+
                 return;
             }
 
@@ -118,7 +125,7 @@ class HistorialCommand extends Command
             foreach ($chunks as $chunk) {
                 $this->replyWithMessage([
                     'text' => $chunk,
-                    'parse_mode' => 'Markdown'
+                    'parse_mode' => 'Markdown',
                 ]);
             }
 
@@ -126,11 +133,11 @@ class HistorialCommand extends Command
             \Log::error('HistorialCommand error', [
                 'chat_id' => $chatId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             $this->replyWithMessage([
-                'text' => "❌ Ocurrió un error al consultar el historial. Por favor intenta más tarde."
+                'text' => '❌ Ocurrió un error al consultar el historial. Por favor intenta más tarde.',
             ]);
         }
     }
@@ -138,11 +145,11 @@ class HistorialCommand extends Command
     private function getUserId(int $chatId): int
     {
         $user = \App\Models\User::where('telegram_chat_id', $chatId)->first();
-        
-        if (!$user) {
+
+        if (! $user) {
             throw new \Exception('Usuario no registrado');
         }
-        
+
         return $user->id;
     }
 
@@ -162,15 +169,15 @@ class HistorialCommand extends Command
     private function formatHistoryResponse($station, array $history, int $days, ?string $fuelType): string
     {
         $stationName = $station->alias ?? $station->station_name;
-        
+
         $response = "📊 *Historial de Precios*\n";
         $response .= "📍 Estación: {$stationName}\n";
         $response .= "📅 Período: Últimos {$days} días\n";
-        
+
         if ($fuelType) {
-            $response .= "⛽ Combustible: " . ucfirst($fuelType) . "\n";
+            $response .= '⛽ Combustible: '.ucfirst($fuelType)."\n";
         }
-        
+
         $response .= "\n";
 
         // Process each fuel type
@@ -179,9 +186,9 @@ class HistorialCommand extends Command
                 continue;
             }
 
-            $response .= "*" . ucfirst($fuel) . "*\n";
+            $response .= '*'.ucfirst($fuel)."*\n";
             $response .= "```\n";
-            
+
             // Create table header
             $response .= "Fecha       | Precio | Cambio\n";
             $response .= "------------|--------|-------\n";
@@ -191,7 +198,7 @@ class HistorialCommand extends Command
             foreach ($fuelHistory['daily_history'] as $day) {
                 $date = Carbon::parse($day['date'])->format('d/m');
                 $price = $day['avg_price'] ?? $day['last_price'];
-                
+
                 $change = '';
                 if ($previousPrice !== null) {
                     $diff = $price - $previousPrice;
@@ -202,23 +209,23 @@ class HistorialCommand extends Command
                         $change = '=';
                     }
                 }
-                
+
                 $response .= sprintf(
                     "%-11s | $%-5.2f | %-6s\n",
                     $date,
                     $price,
                     $change
                 );
-                
+
                 $previousPrice = $price;
             }
-            
+
             $response .= "```\n";
 
             // Add statistics
             $stats = $fuelHistory['statistics'];
             $response .= $this->formatStatistics($stats, $fuelHistory['total_changes']);
-            
+
             // Add trend insight
             $response .= $this->generateHistoryInsight(
                 $fuel,
@@ -227,7 +234,7 @@ class HistorialCommand extends Command
                 $fuelHistory['total_changes'],
                 $days
             );
-            
+
             $response .= "\n";
         }
 
@@ -246,7 +253,7 @@ class HistorialCommand extends Command
         $response .= sprintf("• Máximo: $%.2f\n", $stats['max']);
         $response .= sprintf("• Desv. Est.: $%.2f\n", $stats['std_deviation']);
         $response .= sprintf("• Cambios: %d\n", $totalChanges);
-        
+
         return $response;
     }
 
@@ -258,52 +265,52 @@ class HistorialCommand extends Command
         int $days
     ): string {
         $response = "\n💡 *Análisis:* ";
-        
+
         $avgChangesPerDay = $totalChanges / $days;
         $volatility = $stats['std_deviation'] / $stats['average'] * 100;
-        
+
         if ($trendDirection === 'rising') {
-            $response .= "Tendencia alcista. ";
+            $response .= 'Tendencia alcista. ';
         } elseif ($trendDirection === 'falling') {
-            $response .= "Tendencia bajista. ";
+            $response .= 'Tendencia bajista. ';
         } else {
-            $response .= "Precio estable. ";
+            $response .= 'Precio estable. ';
         }
 
         if ($volatility > 5) {
-            $response .= sprintf("Alta volatilidad (%.1f%%). ", $volatility);
+            $response .= sprintf('Alta volatilidad (%.1f%%). ', $volatility);
         } elseif ($volatility > 2) {
-            $response .= sprintf("Volatilidad moderada (%.1f%%). ", $volatility);
+            $response .= sprintf('Volatilidad moderada (%.1f%%). ', $volatility);
         } else {
-            $response .= "Baja volatilidad. ";
+            $response .= 'Baja volatilidad. ';
         }
 
         if ($avgChangesPerDay > 1) {
-            $response .= "Cambios frecuentes detectados.";
+            $response .= 'Cambios frecuentes detectados.';
         } elseif ($avgChangesPerDay < 0.5) {
-            $response .= "Pocos cambios en el período.";
+            $response .= 'Pocos cambios en el período.';
         }
 
-        return $response . "\n";
+        return $response."\n";
     }
 
     private function generateHistorySummary(array $historyData, int $days): string
     {
         $response = "📌 *Resumen General:*\n";
-        
+
         $trends = [];
         $totalVolatility = 0;
         $count = 0;
-        
+
         foreach ($historyData as $fuel => $data) {
             $trends[$fuel] = $data['trend_direction'];
             $volatility = $data['statistics']['std_deviation'] / $data['statistics']['average'] * 100;
             $totalVolatility += $volatility;
             $count++;
         }
-        
+
         $avgVolatility = $count > 0 ? $totalVolatility / $count : 0;
-        
+
         // Determine overall market condition
         if ($avgVolatility > 5) {
             $response .= "⚠️ Mercado volátil - considera ajustes frecuentes.\n";
@@ -314,9 +321,9 @@ class HistorialCommand extends Command
         }
 
         // Trend summary
-        $risingCount = count(array_filter($trends, fn($t) => $t === 'rising'));
-        $fallingCount = count(array_filter($trends, fn($t) => $t === 'falling'));
-        
+        $risingCount = count(array_filter($trends, fn ($t) => $t === 'rising'));
+        $fallingCount = count(array_filter($trends, fn ($t) => $t === 'falling'));
+
         if ($risingCount > $fallingCount) {
             $response .= "📈 Tendencia general: Alcista\n";
         } elseif ($fallingCount > $risingCount) {
@@ -339,7 +346,7 @@ class HistorialCommand extends Command
         $currentChunk = '';
 
         foreach ($lines as $line) {
-            if (strlen($currentChunk . "\n" . $line) > $maxLength) {
+            if (strlen($currentChunk."\n".$line) > $maxLength) {
                 if ($currentChunk) {
                     $chunks[] = $currentChunk;
                     $currentChunk = $line;
@@ -349,7 +356,7 @@ class HistorialCommand extends Command
                     $currentChunk = substr($line, $maxLength);
                 }
             } else {
-                $currentChunk .= ($currentChunk ? "\n" : '') . $line;
+                $currentChunk .= ($currentChunk ? "\n" : '').$line;
             }
         }
 

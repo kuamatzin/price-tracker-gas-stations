@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Webhooks;
 
 use App\Http\Controllers\Controller;
-use App\Models\ScraperRun;
 use App\Services\ScraperRunService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

@@ -8,8 +8,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class ScraperFailureJob implements ShouldQueue
 {
@@ -93,7 +93,7 @@ class ScraperFailureJob implements ShouldQueue
 
         // If not too many failures, schedule a retry
         $nextRetryTime = now()->addMinutes(30);
-        
+
         Log::info('Scheduling scraper retry', [
             'next_retry' => $nextRetryTime,
             'previous_run_id' => $this->scraperRun->id,
@@ -114,12 +114,12 @@ class ScraperFailureJob implements ShouldQueue
         /*
         $botToken = config('telegram.bot_token');
         $chatId = config('telegram.admin_chat_id');
-        
+
         $message = "⚠️ *Scraper Failed*\n\n";
         $message .= "Run ID: {$this->scraperRun->id}\n";
         $message .= "Duration: {$this->scraperRun->duration_seconds}s\n";
         $message .= "Errors: " . count($this->scraperRun->errors) . "\n";
-        
+
         Http::post("https://api.telegram.org/bot{$botToken}/sendMessage", [
             'chat_id' => $chatId,
             'text' => $message,

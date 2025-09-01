@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -19,11 +19,11 @@ return new class extends Migration
             $table->string('channel', 10);
             $table->boolean('delivered')->default(false);
             $table->text('content')->nullable();
-            
+
             $table->foreign('alert_id')->references('id')->on('alerts')->onDelete('cascade');
             $table->index(['alert_id', 'triggered_at'], 'idx_alert_time');
         });
-        
+
         // Add CHECK constraint for channel (PostgreSQL only)
         if (config('database.default') === 'pgsql') {
             DB::statement("ALTER TABLE alert_notifications ADD CONSTRAINT check_channel CHECK (channel IN ('telegram', 'email', 'web'))");

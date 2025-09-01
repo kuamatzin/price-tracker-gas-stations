@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class HeatMapDataService
 {
@@ -11,7 +11,7 @@ class HeatMapDataService
     {
         $gridSize = $this->calculateGridSize($zoomLevel);
         $stations = $this->getStationsInBounds($bounds, $fuelType);
-        
+
         if ($stations->isEmpty()) {
             return [
                 'bounds' => $bounds,
@@ -19,7 +19,7 @@ class HeatMapDataService
                 'grid_size' => $gridSize,
                 'cells' => [],
                 'legend' => $this->generateLegend([], $fuelType),
-                'timestamp' => now()->toIso8601String()
+                'timestamp' => now()->toIso8601String(),
             ];
         }
 
@@ -31,7 +31,7 @@ class HeatMapDataService
                 $cell['center'],
                 $stations
             );
-            
+
             $cell['price'] = $interpolatedPrice;
             $cell['intensity'] = $this->calculateIntensity(
                 $interpolatedPrice,
@@ -39,7 +39,7 @@ class HeatMapDataService
                 $priceRange['max']
             );
             $cell['color'] = $this->getColorGradient($cell['intensity']);
-            
+
             // Find nearby stations for the cell
             $cell['nearby_stations'] = $this->findNearbyStations(
                 $cell['center'],
@@ -59,9 +59,9 @@ class HeatMapDataService
                 'total_stations' => count($stations),
                 'min_price' => $priceRange['min'],
                 'max_price' => $priceRange['max'],
-                'avg_price' => round($stations->avg('price'), 2)
+                'avg_price' => round($stations->avg('price'), 2),
             ],
-            'timestamp' => now()->toIso8601String()
+            'timestamp' => now()->toIso8601String(),
         ];
     }
 
@@ -88,7 +88,7 @@ class HeatMapDataService
             17 => 0.000152587890625,
             18 => 0.0000762939453125,
             19 => 0.00003814697265625,
-            20 => 0.000019073486328125  // Street level
+            20 => 0.000019073486328125,  // Street level
         ];
 
         return $baseSizes[$zoomLevel] ?? 0.01;
@@ -97,6 +97,7 @@ class HeatMapDataService
     private function getStationsInBounds($bounds, $fuelType)
     {
         $twentyFourHoursAgo = Carbon::now()->subHours(24);
+
         return DB::table('stations as s')
             ->join('price_changes as pc', 'pc.station_numero', '=', 's.numero')
             ->where('pc.fuel_type', $fuelType)
@@ -133,12 +134,12 @@ class HeatMapDataService
                             'north' => min($bounds['south'] + (($latIndex + 1) * $gridSize), $bounds['north']),
                             'south' => $bounds['south'] + ($latIndex * $gridSize),
                             'east' => min($bounds['west'] + (($lngIndex + 1) * $gridSize), $bounds['east']),
-                            'west' => $bounds['west'] + ($lngIndex * $gridSize)
+                            'west' => $bounds['west'] + ($lngIndex * $gridSize),
                         ],
                         'center' => [
                             'lat' => $cellLat,
-                            'lng' => $cellLng
-                        ]
+                            'lng' => $cellLng,
+                        ],
                     ];
                 }
             }
@@ -181,6 +182,7 @@ class HeatMapDataService
         }
 
         $totalWeight = array_sum($weights);
+
         return $totalWeight > 0 ? round($weightedPrice / $totalWeight, 2) : 0;
     }
 
@@ -194,9 +196,9 @@ class HeatMapDataService
         $a = sin($dLat / 2) * sin($dLat / 2) +
              cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
              sin($dLon / 2) * sin($dLon / 2);
-        
+
         $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
-        
+
         return $earthRadius * $c;
     }
 
@@ -208,6 +210,7 @@ class HeatMapDataService
 
         // Normalize price to 0-100 scale
         $normalized = (($price - $minPrice) / ($maxPrice - $minPrice)) * 100;
+
         return round($normalized, 2);
     }
 
@@ -217,7 +220,7 @@ class HeatMapDataService
         $colors = [
             0 => ['r' => 0, 'g' => 255, 'b' => 0],      // Green
             50 => ['r' => 255, 'g' => 255, 'b' => 0],   // Yellow
-            100 => ['r' => 255, 'g' => 0, 'b' => 0]     // Red
+            100 => ['r' => 255, 'g' => 0, 'b' => 0],     // Red
         ];
 
         if ($intensity <= 50) {
@@ -230,7 +233,7 @@ class HeatMapDataService
 
         // Convert to hex color
         return sprintf(
-            "#%02X%02X%02X",
+            '#%02X%02X%02X',
             round($color['r']),
             round($color['g']),
             round($color['b'])
@@ -242,7 +245,7 @@ class HeatMapDataService
         return [
             'r' => $color1['r'] + ($color2['r'] - $color1['r']) * $ratio,
             'g' => $color1['g'] + ($color2['g'] - $color1['g']) * $ratio,
-            'b' => $color1['b'] + ($color2['b'] - $color1['b']) * $ratio
+            'b' => $color1['b'] + ($color2['b'] - $color1['b']) * $ratio,
         ];
     }
 
@@ -253,7 +256,7 @@ class HeatMapDataService
                 'fuel_type' => $fuelType,
                 'min_price' => 0,
                 'max_price' => 0,
-                'color_scale' => []
+                'color_scale' => [],
             ];
         }
 
@@ -266,11 +269,11 @@ class HeatMapDataService
             $ratio = $i / $steps;
             $price = $minPrice + ($maxPrice - $minPrice) * $ratio;
             $intensity = $ratio * 100;
-            
+
             $colorScale[] = [
                 'value' => round($price, 2),
                 'color' => $this->getColorGradient($intensity),
-                'label' => $this->getPriceLabel($price, $minPrice, $maxPrice)
+                'label' => $this->getPriceLabel($price, $minPrice, $maxPrice),
             ];
         }
 
@@ -278,7 +281,7 @@ class HeatMapDataService
             'fuel_type' => $fuelType,
             'min_price' => $minPrice,
             'max_price' => $maxPrice,
-            'color_scale' => $colorScale
+            'color_scale' => $colorScale,
         ];
     }
 
@@ -287,10 +290,19 @@ class HeatMapDataService
         $range = $maxPrice - $minPrice;
         $position = ($price - $minPrice) / $range;
 
-        if ($position <= 0.2) return 'Very Low';
-        if ($position <= 0.4) return 'Low';
-        if ($position <= 0.6) return 'Average';
-        if ($position <= 0.8) return 'High';
+        if ($position <= 0.2) {
+            return 'Very Low';
+        }
+        if ($position <= 0.4) {
+            return 'Low';
+        }
+        if ($position <= 0.6) {
+            return 'Average';
+        }
+        if ($position <= 0.8) {
+            return 'High';
+        }
+
         return 'Very High';
     }
 
@@ -302,7 +314,7 @@ class HeatMapDataService
 
         return [
             'min' => $stations->min('price'),
-            'max' => $stations->max('price')
+            'max' => $stations->max('price'),
         ];
     }
 
@@ -324,7 +336,7 @@ class HeatMapDataService
                     'nombre' => $station->nombre,
                     'brand' => $station->brand,
                     'price' => $station->price,
-                    'distance' => round($distance, 2)
+                    'distance' => round($distance, 2),
                 ];
             }
         }

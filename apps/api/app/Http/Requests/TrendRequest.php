@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
 use Carbon\Carbon;
+use Illuminate\Foundation\Http\FormRequest;
 
 class TrendRequest extends FormRequest
 {
@@ -24,7 +24,7 @@ class TrendRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $period = $this->period ?? 7;
-        
+
         $this->merge([
             'start_date' => $this->start_date ?? now()->subDays($period)->format('Y-m-d'),
             'end_date' => $this->end_date ?? now()->format('Y-m-d'),
@@ -38,7 +38,7 @@ class TrendRequest extends FormRequest
             if ($this->start_date && $this->end_date) {
                 $start = Carbon::parse($this->start_date);
                 $end = Carbon::parse($this->end_date);
-                
+
                 // Max 365 days for trend analysis
                 if ($start->diffInDays($end) > 365) {
                     $validator->errors()->add('date_range', 'Date range cannot exceed 365 days for trend analysis.');

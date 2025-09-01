@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -24,7 +24,7 @@ return new class extends Migration
             $table->integer('api_rate_limit')->default(100);
             $table->rememberToken();
             $table->timestamps();
-            
+
             $table->index('email', 'idx_email');
             $table->index('telegram_chat_id', 'idx_telegram');
         });
@@ -43,7 +43,7 @@ return new class extends Migration
             $table->longText('payload');
             $table->integer('last_activity')->index();
         });
-        
+
         // Add CHECK constraint for subscription_tier (PostgreSQL only)
         if (config('database.default') === 'pgsql') {
             DB::statement("ALTER TABLE users ADD CONSTRAINT check_subscription_tier CHECK (subscription_tier IN ('free', 'basic', 'premium'))");

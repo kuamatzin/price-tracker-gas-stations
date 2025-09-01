@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class GeographicComparisonService
 {
@@ -23,7 +23,7 @@ class GeographicComparisonService
                 'areas' => [],
                 'comparison' => [],
                 'insights' => [],
-                'rankings' => []
+                'rankings' => [],
             ];
         }
 
@@ -35,7 +35,7 @@ class GeographicComparisonService
             'areas' => $results,
             'comparison' => $comparison,
             'insights' => $insights,
-            'rankings' => $rankings
+            'rankings' => $rankings,
         ];
     }
 
@@ -45,12 +45,12 @@ class GeographicComparisonService
             'type' => $area['type'],
             'id' => $area['id'],
             'name' => '',
-            'fuel_prices' => []
+            'fuel_prices' => [],
         ];
 
         if ($area['type'] === 'estado') {
             $estado = DB::table('entidades')->where('id', $area['id'])->first();
-            if (!$estado) {
+            if (! $estado) {
                 return null;
             }
             $stats['name'] = $estado->nombre;
@@ -89,25 +89,25 @@ class GeographicComparisonService
                             AND pc2.fuel_type = pc.fuel_type
                             AND pc.changed_at >= ?
                         )', [$twentyFourHoursAgo])
-                        ->where('s.' . ($area['type'] === 'estado' ? 'entidad_id' : 'municipio_id'), $area['id'])
+                        ->where('s.'.($area['type'] === 'estado' ? 'entidad_id' : 'municipio_id'), $area['id'])
                         ->where('s.is_active', true)
                         ->pluck('pc.price')
                         ->toArray();
-                    
+
                     $stddev = $this->calculateStdDev($prices);
-                    
+
                     $stats['fuel_prices'][$fuelType] = [
                         'avg' => round($priceData->avg_price, 2),
                         'min' => $priceData->min_price,
                         'max' => $priceData->max_price,
                         'stddev' => $stddev,
-                        'station_count' => $priceData->station_count
+                        'station_count' => $priceData->station_count,
                     ];
                 }
             }
         } elseif ($area['type'] === 'municipio') {
             $municipio = DB::table('municipios')->where('id', $area['id'])->first();
-            if (!$municipio) {
+            if (! $municipio) {
                 return null;
             }
             $stats['name'] = $municipio->nombre;
@@ -146,19 +146,19 @@ class GeographicComparisonService
                             AND pc2.fuel_type = pc.fuel_type
                             AND pc.changed_at >= ?
                         )', [$twentyFourHoursAgo])
-                        ->where('s.' . ($area['type'] === 'estado' ? 'entidad_id' : 'municipio_id'), $area['id'])
+                        ->where('s.'.($area['type'] === 'estado' ? 'entidad_id' : 'municipio_id'), $area['id'])
                         ->where('s.is_active', true)
                         ->pluck('pc.price')
                         ->toArray();
-                    
+
                     $stddev = $this->calculateStdDev($prices);
-                    
+
                     $stats['fuel_prices'][$fuelType] = [
                         'avg' => round($priceData->avg_price, 2),
                         'min' => $priceData->min_price,
                         'max' => $priceData->max_price,
                         'stddev' => $stddev,
-                        'station_count' => $priceData->station_count
+                        'station_count' => $priceData->station_count,
                     ];
                 }
             }
@@ -166,7 +166,7 @@ class GeographicComparisonService
 
         // Add population weighting if available
         $stats['population'] = $this->getAreaPopulation($area);
-        
+
         return $stats;
     }
 
@@ -182,16 +182,16 @@ class GeographicComparisonService
                 }
 
                 foreach ($fuelTypes as $fuel) {
-                    if (isset($results[$fromId]['fuel_prices'][$fuel]) && 
+                    if (isset($results[$fromId]['fuel_prices'][$fuel]) &&
                         isset($results[$toId]['fuel_prices'][$fuel])) {
-                        
+
                         $fromPrice = $results[$fromId]['fuel_prices'][$fuel]['avg'];
                         $toPrice = $results[$toId]['fuel_prices'][$fuel]['avg'];
 
                         $matrix[$fromId][$toId][$fuel] = [
                             'difference' => round($fromPrice - $toPrice, 2),
                             'percent' => round((($fromPrice - $toPrice) / $toPrice) * 100, 2),
-                            'cheaper' => $fromPrice < $toPrice
+                            'cheaper' => $fromPrice < $toPrice,
                         ];
                     }
                 }
@@ -228,7 +228,7 @@ class GeographicComparisonService
                 'area' => $minArea,
                 'area_name' => $results[$minArea]['name'],
                 'message' => "Cheapest $fuel prices",
-                'value' => $minPrice
+                'value' => $minPrice,
             ];
 
             $insights[] = [
@@ -237,7 +237,7 @@ class GeographicComparisonService
                 'area' => $maxArea,
                 'area_name' => $results[$maxArea]['name'],
                 'message' => "Most expensive $fuel prices",
-                'value' => $maxPrice
+                'value' => $maxPrice,
             ];
 
             // Price spread insight
@@ -247,7 +247,7 @@ class GeographicComparisonService
                     'type' => 'average_price',
                     'fuel' => $fuel,
                     'message' => "Average $fuel price across compared areas",
-                    'value' => round($avgPrice, 2)
+                    'value' => round($avgPrice, 2),
                 ];
             }
         }
@@ -261,7 +261,7 @@ class GeographicComparisonService
             }
         }
 
-        if (!empty($disparities)) {
+        if (! empty($disparities)) {
             $maxDisparity = max($disparities);
             $maxDisparityArea = array_search($maxDisparity, $disparities);
 
@@ -270,7 +270,7 @@ class GeographicComparisonService
                 'area' => $maxDisparityArea,
                 'area_name' => $results[$maxDisparityArea]['name'],
                 'message' => 'Highest price variation within area',
-                'value' => round($maxDisparity, 2)
+                'value' => round($maxDisparity, 2),
             ];
 
             $minDisparity = min($disparities);
@@ -281,7 +281,7 @@ class GeographicComparisonService
                 'area' => $minDisparityArea,
                 'area_name' => $results[$minDisparityArea]['name'],
                 'message' => 'Most uniform prices within area',
-                'value' => round($minDisparity, 2)
+                'value' => round($minDisparity, 2),
             ];
         }
 
@@ -289,7 +289,7 @@ class GeographicComparisonService
         foreach ($results as $areaKey => $stats) {
             $competitionScore = 0;
             $fuelCount = 0;
-            
+
             foreach ($fuelTypes as $fuel) {
                 if (isset($stats['fuel_prices'][$fuel])) {
                     $cv = $stats['fuel_prices'][$fuel]['stddev'] / $stats['fuel_prices'][$fuel]['avg'];
@@ -297,7 +297,7 @@ class GeographicComparisonService
                     $fuelCount++;
                 }
             }
-            
+
             if ($fuelCount > 0) {
                 $results[$areaKey]['competition_score'] = round($competitionScore / $fuelCount * 100, 2);
             }
@@ -305,10 +305,10 @@ class GeographicComparisonService
 
         // Find most and least competitive markets
         $competitionScores = array_column($results, 'competition_score');
-        if (!empty($competitionScores)) {
+        if (! empty($competitionScores)) {
             $maxCompetition = max($competitionScores);
             $minCompetition = min($competitionScores);
-            
+
             foreach ($results as $areaKey => $stats) {
                 if (isset($stats['competition_score'])) {
                     if ($stats['competition_score'] == $maxCompetition) {
@@ -317,7 +317,7 @@ class GeographicComparisonService
                             'area' => $areaKey,
                             'area_name' => $stats['name'],
                             'message' => 'Most competitive market (highest price variation)',
-                            'value' => $maxCompetition
+                            'value' => $maxCompetition,
                         ];
                     }
                     if ($stats['competition_score'] == $minCompetition) {
@@ -326,7 +326,7 @@ class GeographicComparisonService
                             'area' => $areaKey,
                             'area_name' => $stats['name'],
                             'message' => 'Least competitive market (lowest price variation)',
-                            'value' => $minCompetition
+                            'value' => $minCompetition,
                         ];
                     }
                 }
@@ -350,7 +350,7 @@ class GeographicComparisonService
                     // Lower average price is better
                     $avgPrice = $data['fuel_prices'][$fuel]['avg'];
                     $stationCount = $data['fuel_prices'][$fuel]['station_count'];
-                    
+
                     // Weight by station count (more stations = more reliable data)
                     $weight = sqrt($stationCount);
                     $score += (100 / $avgPrice) * $weight;
@@ -360,7 +360,7 @@ class GeographicComparisonService
 
             if ($weightSum > 0) {
                 $finalScore = round($score / $weightSum, 2);
-                
+
                 $rankings[] = [
                     'area_key' => $areaKey,
                     'area_type' => $data['type'],
@@ -370,9 +370,9 @@ class GeographicComparisonService
                     'avg_prices' => [
                         'regular' => $data['fuel_prices']['regular']['avg'] ?? null,
                         'premium' => $data['fuel_prices']['premium']['avg'] ?? null,
-                        'diesel' => $data['fuel_prices']['diesel']['avg'] ?? null
+                        'diesel' => $data['fuel_prices']['diesel']['avg'] ?? null,
                     ],
-                    'total_stations' => array_sum(array_column($data['fuel_prices'], 'station_count'))
+                    'total_stations' => array_sum(array_column($data['fuel_prices'], 'station_count')),
                 ];
             }
         }
@@ -392,7 +392,7 @@ class GeographicComparisonService
 
     private function getAreaKey($area)
     {
-        return $area['type'] . '_' . $area['id'];
+        return $area['type'].'_'.$area['id'];
     }
 
     private function getAreaPopulation($area)

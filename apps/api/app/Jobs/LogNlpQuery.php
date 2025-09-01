@@ -31,21 +31,21 @@ class LogNlpQuery implements ShouldQueue
     {
         try {
             $repository->create($this->queryData);
-            
+
             // Log for analytics if confidence is very low
             if (($this->queryData['confidence'] ?? 0) < 0.5) {
                 Log::channel('nlp')->warning('Low confidence NLP query', [
                     'query' => $this->queryData['original_query'],
                     'confidence' => $this->queryData['confidence'],
-                    'intent' => $this->queryData['interpreted_intent'] ?? 'unknown'
+                    'intent' => $this->queryData['interpreted_intent'] ?? 'unknown',
                 ]);
             }
         } catch (\Exception $e) {
             Log::error('Failed to log NLP query', [
                 'error' => $e->getMessage(),
-                'data' => $this->queryData
+                'data' => $this->queryData,
             ]);
-            
+
             // Don't throw - we don't want to retry logging failures
         }
     }

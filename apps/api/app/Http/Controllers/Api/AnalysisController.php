@@ -2,22 +2,24 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Api\BaseApiController;
 use App\Services\CompetitorService;
 use App\Services\PriceRankingService;
-use App\Services\SpreadAnalysisService;
 use App\Services\RecommendationEngine;
-use Illuminate\Http\Request;
+use App\Services\SpreadAnalysisService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
 class AnalysisController extends BaseApiController
 {
     protected CompetitorService $competitorService;
+
     protected PriceRankingService $rankingService;
+
     protected SpreadAnalysisService $spreadService;
+
     protected RecommendationEngine $recommendationEngine;
-    
+
     public function __construct(
         CompetitorService $competitorService,
         PriceRankingService $rankingService,
@@ -29,105 +31,105 @@ class AnalysisController extends BaseApiController
         $this->spreadService = $spreadService;
         $this->recommendationEngine = $recommendationEngine;
     }
-    
+
     public function ranking(Request $request): JsonResponse
     {
         $user = $request->user();
-        
-        if (!$user->station_numero) {
+
+        if (! $user->station_numero) {
             return $this->errorResponse('User does not have an associated station', 400);
         }
-        
-        $cacheKey = "analysis:ranking:{$user->station_numero}:" . date('Y-m-d-H');
-        
+
+        $cacheKey = "analysis:ranking:{$user->station_numero}:".date('Y-m-d-H');
+
         $data = Cache::remember($cacheKey, 900, function () use ($user) {
             $station = $this->competitorService->getUserStation($user->station_numero);
-            
-            if (!$station) {
+
+            if (! $station) {
                 return null;
             }
-            
+
             $competitors = $this->competitorService->getCompetitors($station);
             $rankings = $this->rankingService->calculateRankings($station, $competitors);
-            
+
             return [
                 'station' => [
                     'numero' => $station->numero,
-                    'nombre' => $station->nombre
+                    'nombre' => $station->nombre,
                 ],
                 'rankings' => $rankings,
-                'overall_position' => $this->rankingService->getOverallPosition($rankings)
+                'overall_position' => $this->rankingService->getOverallPosition($rankings),
             ];
         });
-        
-        if (!$data) {
+
+        if (! $data) {
             return $this->notFoundResponse('Station not found');
         }
-        
+
         return $this->successResponse($data);
     }
-    
+
     public function spread(Request $request): JsonResponse
     {
         $user = $request->user();
-        
-        if (!$user->station_numero) {
+
+        if (! $user->station_numero) {
             return $this->errorResponse('User does not have an associated station', 400);
         }
-        
-        $cacheKey = "analysis:spread:{$user->station_numero}:" . date('Y-m-d-H');
-        
+
+        $cacheKey = "analysis:spread:{$user->station_numero}:".date('Y-m-d-H');
+
         $data = Cache::remember($cacheKey, 900, function () use ($user) {
             $station = $this->competitorService->getUserStation($user->station_numero);
-            
-            if (!$station) {
+
+            if (! $station) {
                 return null;
             }
-            
+
             $competitors = $this->competitorService->getCompetitors($station);
             $analysis = $this->spreadService->analyzeAllFuelTypes($station, $competitors);
             $recommendations = $this->recommendationEngine->generateRecommendations($analysis);
-            
+
             return [
                 'analysis' => $analysis,
-                'recommendations' => $recommendations
+                'recommendations' => $recommendations,
             ];
         });
-        
-        if (!$data) {
+
+        if (! $data) {
             return $this->notFoundResponse('Station not found');
         }
-        
+
         return $this->successResponse($data);
     }
-    
+
     public function insights(Request $request): JsonResponse
     {
         $user = $request->user();
-        
-        if (!$user->station_numero) {
+
+        if (! $user->station_numero) {
             return $this->errorResponse('User does not have an associated station', 400);
         }
-        
-        $cacheKey = "analysis:insights:{$user->station_numero}:" . date('Y-m-d-H');
-        
+
+        $cacheKey = "analysis:insights:{$user->station_numero}:".date('Y-m-d-H');
+
         $data = Cache::remember($cacheKey, 900, function () use ($user) {
             $station = $this->competitorService->getUserStation($user->station_numero);
-            
-            if (!$station) {
+
+            if (! $station) {
                 return null;
             }
-            
+
             $competitors = $this->competitorService->getCompetitors($station);
             $insights = $this->competitorService->getCompetitiveInsights($station, $competitors);
-            
+
             return $insights;
         });
-        
-        if (!$data) {
+
+        if (! $data) {
             return $this->notFoundResponse('Station not found');
         }
-        
+
         return $this->successResponse($data);
     }
 }

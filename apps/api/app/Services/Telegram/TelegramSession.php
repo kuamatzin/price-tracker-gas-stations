@@ -15,12 +15,12 @@ class TelegramSession
     public function __construct(array $data = [])
     {
         $this->data = $data;
-        
+
         // Set default values
-        if (!isset($this->data['created_at'])) {
+        if (! isset($this->data['created_at'])) {
             $this->data['created_at'] = time();
         }
-        
+
         $this->data['updated_at'] = time();
     }
 
@@ -76,11 +76,11 @@ class TelegramSession
     {
         $userId = $this->data['user_id'] ?? null;
         $this->data = [];
-        
+
         if ($userId) {
             $this->data['user_id'] = $userId;
         }
-        
+
         $this->data['created_at'] = time();
         $this->data['updated_at'] = time();
     }
@@ -150,10 +150,10 @@ class TelegramSession
      */
     public function addStateData(string $key, $value): void
     {
-        if (!isset($this->data['state_data'])) {
+        if (! isset($this->data['state_data'])) {
             $this->data['state_data'] = [];
         }
-        
+
         $this->data['state_data'][$key] = $value;
         $this->data['updated_at'] = time();
     }
@@ -189,6 +189,7 @@ class TelegramSession
     public function getAge(): int
     {
         $createdAt = $this->data['created_at'] ?? time();
+
         return time() - $createdAt;
     }
 
@@ -198,6 +199,7 @@ class TelegramSession
     public function getIdleTime(): int
     {
         $updatedAt = $this->data['updated_at'] ?? time();
+
         return time() - $updatedAt;
     }
 
@@ -241,43 +243,43 @@ class TelegramSession
     public function mergeConversationContext(array $newContext): void
     {
         $existing = $this->getConversationContext();
-        
+
         // Merge entities
         if (isset($newContext['entities']) && isset($existing['entities'])) {
             $newContext['entities'] = array_merge($existing['entities'], $newContext['entities']);
         }
-        
+
         // Keep track of last intent
         if (isset($existing['intent'])) {
             $newContext['last_intent'] = $existing['intent'];
         }
-        
+
         // Merge and update
         $merged = array_merge($existing, $newContext);
         $merged['updated_at'] = time();
-        
+
         $this->setConversationContext($merged);
     }
 
     /**
      * Check if conversation context is expired (5 minutes default)
      */
-    public function isContextExpired(int $ttl = null): bool
+    public function isContextExpired(?int $ttl = null): bool
     {
         $ttl = $ttl ?? config('deepseek.context_ttl_seconds', 300);
         $context = $this->getConversationContext();
-        
-        if (empty($context) || !isset($context['updated_at'])) {
+
+        if (empty($context) || ! isset($context['updated_at'])) {
             return true;
         }
-        
+
         return (time() - $context['updated_at']) > $ttl;
     }
 
     /**
      * Clear expired conversation context
      */
-    public function clearExpiredContext(int $ttl = null): void
+    public function clearExpiredContext(?int $ttl = null): void
     {
         if ($this->isContextExpired($ttl)) {
             unset($this->data['conversation_context']);
@@ -291,6 +293,7 @@ class TelegramSession
     public function getLastIntent(): ?string
     {
         $context = $this->getConversationContext();
+
         return $context['intent'] ?? $context['last_intent'] ?? null;
     }
 
@@ -300,6 +303,7 @@ class TelegramSession
     public function getLastEntities(): array
     {
         $context = $this->getConversationContext();
+
         return $context['entities'] ?? [];
     }
 
@@ -308,21 +312,21 @@ class TelegramSession
      */
     public function addToHistory(string $query, string $response): void
     {
-        if (!isset($this->data['conversation_history'])) {
+        if (! isset($this->data['conversation_history'])) {
             $this->data['conversation_history'] = [];
         }
-        
+
         // Keep only last 5 exchanges
         if (count($this->data['conversation_history']) >= 5) {
             array_shift($this->data['conversation_history']);
         }
-        
+
         $this->data['conversation_history'][] = [
             'query' => $query,
             'response' => $response,
-            'timestamp' => time()
+            'timestamp' => time(),
         ];
-        
+
         $this->data['updated_at'] = time();
     }
 

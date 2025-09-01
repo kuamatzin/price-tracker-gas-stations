@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class MarketAggregationService
 {
@@ -16,100 +16,103 @@ class MarketAggregationService
     ): array {
         $query = $this->buildMarketQuery($entidadId, $municipioId, $startDate, $endDate, $grouping);
         $trends = $query->get();
-        
+
         // Group by date and format
         $groupedTrends = $this->groupAndFormatTrends($trends, $grouping);
-        
+
         // Calculate summary statistics
         $summary = $this->calculateMarketSummary($trends, $startDate, $endDate);
-        
+
         // Get area information
         $area = $this->getAreaInfo($entidadId, $municipioId);
-        
+
         return [
             'area' => $area,
             'period' => [
                 'start' => $startDate,
                 'end' => $endDate,
-                'grouping' => $grouping
+                'grouping' => $grouping,
             ],
             'trends' => $groupedTrends,
-            'summary' => $summary
+            'summary' => $summary,
         ];
     }
 
     private function buildMarketQuery(?int $entidadId, ?int $municipioId, string $startDate, string $endDate, string $grouping)
     {
         $dbDriver = DB::connection()->getDriverName();
-        
+
         // Build database-agnostic date formatting
         $periodExpression = $this->getDateExpression($grouping, $dbDriver);
-        
+
         // Build database-agnostic median calculation
         $medianExpression = $this->getMedianExpression($dbDriver);
-        
+
         $query = DB::table('price_changes as pc')
             ->join('stations as s', 'pc.station_numero', '=', 's.numero')
             ->leftJoin('entidades as e', 's.entidad_id', '=', 'e.id')
             ->leftJoin('municipios as m', 's.municipio_id', '=', 'm.id')
             ->select(
-                DB::raw($periodExpression . ' as period'),
+                DB::raw($periodExpression.' as period'),
                 'pc.fuel_type',
                 DB::raw('AVG(pc.price) as avg_price'),
                 DB::raw('MIN(pc.price) as min_price'),
                 DB::raw('MAX(pc.price) as max_price'),
                 DB::raw('STDDEV(pc.price) as price_stddev'),
-                DB::raw($medianExpression . ' as median_price'),
+                DB::raw($medianExpression.' as median_price'),
                 DB::raw('COUNT(DISTINCT pc.station_numero) as station_count'),
                 DB::raw('COUNT(*) as sample_size')
             )
-            ->whereBetween('pc.changed_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
+            ->whereBetween('pc.changed_at', [$startDate.' 00:00:00', $endDate.' 23:59:59']);
 
         if ($entidadId) {
             $query->where('s.entidad_id', $entidadId);
         }
-        
+
         if ($municipioId) {
             $query->where('s.municipio_id', $municipioId);
         }
 
         return $query->groupBy('period', 'pc.fuel_type')
-                    ->orderBy('period')
-                    ->orderBy('pc.fuel_type');
+            ->orderBy('period')
+            ->orderBy('pc.fuel_type');
     }
 
     private function getDateExpression(string $grouping, string $driver): string
     {
         switch ($driver) {
             case 'mysql':
-                $format = match($grouping) {
+                $format = match ($grouping) {
                     'hourly' => '%Y-%m-%d %H:00:00',
                     'daily' => '%Y-%m-%d',
                     'weekly' => '%Y-%W',
                     'monthly' => '%Y-%m',
                     default => '%Y-%m-%d'
                 };
+
                 return "DATE_FORMAT(pc.changed_at, '{$format}')";
-                
+
             case 'pgsql':
-                $format = match($grouping) {
+                $format = match ($grouping) {
                     'hourly' => 'YYYY-MM-DD HH24:00:00',
                     'daily' => 'YYYY-MM-DD',
                     'weekly' => 'IYYY-IW',
                     'monthly' => 'YYYY-MM',
                     default => 'YYYY-MM-DD'
                 };
+
                 return "TO_CHAR(pc.changed_at, '{$format}')";
-                
+
             case 'sqlite':
             default:
-                $format = match($grouping) {
+                $format = match ($grouping) {
                     'hourly' => "strftime('%Y-%m-%d %H:00:00', pc.changed_at)",
                     'daily' => "strftime('%Y-%m-%d', pc.changed_at)",
                     'weekly' => "strftime('%Y-%W', pc.changed_at)",
                     'monthly' => "strftime('%Y-%m', pc.changed_at)",
                     default => "strftime('%Y-%m-%d', pc.changed_at)"
                 };
+
                 return $format;
         }
     }
@@ -119,17 +122,17 @@ class MarketAggregationService
         switch ($driver) {
             case 'mysql':
                 // MySQL 8.0+ supports window functions
-                return "PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY pc.price)";
-                
+                return 'PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY pc.price)';
+
             case 'pgsql':
                 // PostgreSQL supports PERCENTILE_CONT
-                return "PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY pc.price)";
-                
+                return 'PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY pc.price)';
+
             case 'sqlite':
             default:
                 // SQLite doesn't support PERCENTILE_CONT, use AVG as approximation
                 // This is a simplified median - for production consider a subquery approach
-                return "AVG(pc.price)";
+                return 'AVG(pc.price)';
         }
     }
 
@@ -137,22 +140,22 @@ class MarketAggregationService
     {
         $grouped = [];
         $nationalAvg = $this->getNationalAverage();
-        
+
         foreach ($trends as $trend) {
             $period = $trend->period;
-            
-            if (!isset($grouped[$period])) {
+
+            if (! isset($grouped[$period])) {
                 $grouped[$period] = [
                     'date' => $this->formatPeriodDate($period, $grouping),
                     'regular' => null,
                     'premium' => null,
-                    'diesel' => null
+                    'diesel' => null,
                 ];
             }
-            
+
             $fuelType = $trend->fuel_type;
             $nationalFuelAvg = $nationalAvg[$fuelType] ?? null;
-            
+
             $grouped[$period][$fuelType] = [
                 'avg' => round($trend->avg_price, 2),
                 'min' => round($trend->min_price, 2),
@@ -161,10 +164,10 @@ class MarketAggregationService
                 'stddev' => round($trend->price_stddev, 2),
                 'station_count' => $trend->station_count,
                 'sample_size' => $trend->sample_size,
-                'vs_national' => $this->compareToNational($trend->avg_price, $nationalFuelAvg)
+                'vs_national' => $this->compareToNational($trend->avg_price, $nationalFuelAvg),
             ];
         }
-        
+
         return array_values($grouped);
     }
 
@@ -175,12 +178,13 @@ class MarketAggregationService
                 // Convert year-week to date range
                 [$year, $week] = explode('-', $period);
                 $date = Carbon::now()->setISODate($year, $week);
-                return $date->startOfWeek()->format('Y-m-d') . ' - ' . $date->endOfWeek()->format('Y-m-d');
-            
+
+                return $date->startOfWeek()->format('Y-m-d').' - '.$date->endOfWeek()->format('Y-m-d');
+
             case 'monthly':
                 // Convert year-month to readable format
                 return Carbon::createFromFormat('Y-m', $period)->format('F Y');
-            
+
             default:
                 return $period;
         }
@@ -197,7 +201,7 @@ class MarketAggregationService
             ->groupBy('fuel_type')
             ->get()
             ->keyBy('fuel_type')
-            ->map(fn($item) => $item->avg_price)
+            ->map(fn ($item) => $item->avg_price)
             ->toArray();
 
         return $avgPrices;
@@ -214,7 +218,7 @@ class MarketAggregationService
 
         return [
             'difference' => round($difference, 2),
-            'percent' => round($percent, 2)
+            'percent' => round($percent, 2),
         ];
     }
 
@@ -223,82 +227,84 @@ class MarketAggregationService
         // Get first and last period data for each fuel type
         $periodChanges = [];
         $volatilityIndex = [];
-        
+
         $fuelTypes = ['regular', 'premium', 'diesel'];
-        
+
         foreach ($fuelTypes as $fuelType) {
             $fuelTrends = $trends->where('fuel_type', $fuelType)->sortBy('period');
-            
+
             if ($fuelTrends->isNotEmpty()) {
                 $first = $fuelTrends->first();
                 $last = $fuelTrends->last();
-                
+
                 if ($first->avg_price > 0) {
                     $periodChanges[$fuelType] = round(
                         (($last->avg_price - $first->avg_price) / $first->avg_price) * 100,
                         2
                     );
                 }
-                
+
                 // Calculate average volatility (stddev)
                 $avgStddev = $fuelTrends->avg('price_stddev');
                 $volatilityIndex[$fuelType] = round($avgStddev, 2);
             }
         }
-        
+
         return [
             'period_change' => $periodChanges,
-            'volatility_index' => array_sum($volatilityIndex) > 0 
+            'volatility_index' => array_sum($volatilityIndex) > 0
                 ? round(array_sum($volatilityIndex) / count($volatilityIndex), 2)
                 : 0,
             'total_stations' => $trends->max('station_count') ?? 0,
-            'total_samples' => $trends->sum('sample_size')
+            'total_samples' => $trends->sum('sample_size'),
         ];
     }
 
     private function getAreaInfo(?int $entidadId, ?int $municipioId): array
     {
         $area = [];
-        
+
         if ($entidadId) {
             $entidad = DB::table('entidades')->where('id', $entidadId)->first();
             $area['entidad'] = $entidad ? $entidad->nombre : null;
         }
-        
+
         if ($municipioId) {
             $municipio = DB::table('municipios')->where('id', $municipioId)->first();
             $area['municipio'] = $municipio ? $municipio->nombre : null;
         }
-        
+
         if (empty($area)) {
             $area = ['scope' => 'national'];
         }
-        
+
         return $area;
     }
 
     public function getStationCorrelations(array $stationIds, string $startDate, string $endDate): array
     {
         $correlations = [];
-        
+
         foreach ($stationIds as $i => $stationA) {
             foreach ($stationIds as $j => $stationB) {
-                if ($i >= $j) continue;
-                
+                if ($i >= $j) {
+                    continue;
+                }
+
                 $correlation = $this->calculateCorrelation($stationA, $stationB, $startDate, $endDate);
                 if ($correlation !== null) {
                     $correlations[] = [
                         'station_a' => $stationA,
                         'station_b' => $stationB,
-                        'correlation' => $correlation
+                        'correlation' => $correlation,
                     ];
                 }
             }
         }
-        
+
         // Sort by correlation strength
-        usort($correlations, fn($a, $b) => abs($b['correlation']) <=> abs($a['correlation']));
-        
+        usort($correlations, fn ($a, $b) => abs($b['correlation']) <=> abs($a['correlation']));
+
         return $correlations;
     }
 
@@ -338,14 +344,14 @@ class MarketAggregationService
         for ($i = 0; $i < $minLength; $i++) {
             $diffA = $pricesA[$i] - $meanA;
             $diffB = $pricesB[$i] - $meanB;
-            
+
             $numerator += $diffA * $diffB;
             $denominatorA += $diffA * $diffA;
             $denominatorB += $diffB * $diffB;
         }
 
         $denominator = sqrt($denominatorA * $denominatorB);
-        
+
         return $denominator != 0 ? round($numerator / $denominator, 3) : null;
     }
 }

@@ -2,13 +2,13 @@
 
 namespace Tests\Feature\Api;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use App\Models\User;
-use App\Models\Station;
-use App\Models\PriceChange;
 use App\Models\Entidad;
 use App\Models\Municipio;
+use App\Models\PriceChange;
+use App\Models\Station;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class GeoControllerTest extends TestCase
 {
@@ -27,11 +27,11 @@ class GeoControllerTest extends TestCase
         // Create test data
         $estado = Entidad::factory()->create(['nombre' => 'CDMX', 'codigo' => 'CDMX']);
         $municipio = Municipio::factory()->create(['entidad_id' => $estado->id]);
-        
+
         $stations = Station::factory()->count(3)->create([
             'entidad_id' => $estado->id,
             'municipio_id' => $municipio->id,
-            'is_active' => true
+            'is_active' => true,
         ]);
 
         foreach ($stations as $station) {
@@ -39,7 +39,7 @@ class GeoControllerTest extends TestCase
                 'station_numero' => $station->numero,
                 'fuel_type' => 'regular',
                 'price' => fake()->randomFloat(2, 22, 24),
-                'changed_at' => now()
+                'changed_at' => now(),
             ]);
         }
 
@@ -56,15 +56,15 @@ class GeoControllerTest extends TestCase
                         'fuel_prices',
                         'total_stations',
                         'market_efficiency',
-                        'last_update'
-                    ]
+                        'last_update',
+                    ],
                 ],
                 'summary' => [
                     'total_estados',
                     'national_average',
                     'cheapest_estado',
-                    'most_expensive_estado'
-                ]
+                    'most_expensive_estado',
+                ],
             ]);
     }
 
@@ -72,19 +72,19 @@ class GeoControllerTest extends TestCase
     {
         $estado = Entidad::factory()->create();
         $municipios = Municipio::factory()->count(25)->create(['entidad_id' => $estado->id]);
-        
+
         foreach ($municipios as $municipio) {
             $station = Station::factory()->create([
                 'entidad_id' => $estado->id,
                 'municipio_id' => $municipio->id,
-                'is_active' => true
+                'is_active' => true,
             ]);
 
             PriceChange::factory()->create([
                 'station_numero' => $station->numero,
                 'fuel_type' => 'regular',
                 'price' => fake()->randomFloat(2, 22, 24),
-                'changed_at' => now()
+                'changed_at' => now(),
             ]);
         }
 
@@ -100,8 +100,8 @@ class GeoControllerTest extends TestCase
                         'fuel_prices',
                         'station_count',
                         'station_density',
-                        'competitiveness_index'
-                    ]
+                        'competitiveness_index',
+                    ],
                 ],
                 'pagination' => [
                     'total',
@@ -109,9 +109,9 @@ class GeoControllerTest extends TestCase
                     'current_page',
                     'last_page',
                     'from',
-                    'to'
+                    'to',
                 ],
-                'estado'
+                'estado',
             ])
             ->assertJsonPath('pagination.per_page', 10)
             ->assertJsonPath('pagination.current_page', 1);
@@ -121,11 +121,11 @@ class GeoControllerTest extends TestCase
     {
         $estado = Entidad::factory()->create();
         $municipio = Municipio::factory()->create(['entidad_id' => $estado->id]);
-        
+
         $stations = Station::factory()->count(5)->create([
             'entidad_id' => $estado->id,
             'municipio_id' => $municipio->id,
-            'is_active' => true
+            'is_active' => true,
         ]);
 
         $prices = [22.45, 22.89, 23.01, 23.45, 23.67];
@@ -134,7 +134,7 @@ class GeoControllerTest extends TestCase
                 'station_numero' => $station->numero,
                 'fuel_type' => 'regular',
                 'price' => $prices[$index],
-                'changed_at' => now()
+                'changed_at' => now(),
             ]);
         }
 
@@ -147,7 +147,7 @@ class GeoControllerTest extends TestCase
                     'municipio' => [
                         'id',
                         'nombre',
-                        'estado'
+                        'estado',
                     ],
                     'statistics' => [
                         'regular' => [
@@ -157,17 +157,17 @@ class GeoControllerTest extends TestCase
                                 'max',
                                 'median',
                                 'stddev',
-                                'coefficient_variation'
+                                'coefficient_variation',
                             ],
                             'top_performers',
                             'bottom_performers',
                             'station_count',
                             'price_distribution',
-                            'last_update'
-                        ]
+                            'last_update',
+                        ],
                     ],
-                    'trends'
-                ]
+                    'trends',
+                ],
             ]);
     }
 
@@ -188,9 +188,9 @@ class GeoControllerTest extends TestCase
                 'areas' => [
                     ['type' => 'estado', 'id' => $estado1->id],
                     ['type' => 'estado', 'id' => $estado2->id],
-                    ['type' => 'municipio', 'id' => $municipio->id]
+                    ['type' => 'municipio', 'id' => $municipio->id],
                 ],
-                'fuel_types' => ['regular']
+                'fuel_types' => ['regular'],
             ]);
 
         $response->assertStatus(200)
@@ -208,10 +208,10 @@ class GeoControllerTest extends TestCase
                             'name',
                             'score',
                             'avg_prices',
-                            'total_stations'
-                        ]
-                    ]
-                ]
+                            'total_stations',
+                        ],
+                    ],
+                ],
             ]);
     }
 
@@ -219,14 +219,14 @@ class GeoControllerTest extends TestCase
     {
         $estado = Entidad::factory()->create();
         $municipio = Municipio::factory()->create(['entidad_id' => $estado->id]);
-        
+
         // Create stations within bounds
         $stations = Station::factory()->count(5)->create([
             'entidad_id' => $estado->id,
             'municipio_id' => $municipio->id,
             'lat' => fake()->latitude(19.3, 19.5),
             'lng' => fake()->longitude(-99.2, -99.0),
-            'is_active' => true
+            'is_active' => true,
         ]);
 
         foreach ($stations as $station) {
@@ -234,18 +234,18 @@ class GeoControllerTest extends TestCase
                 'station_numero' => $station->numero,
                 'fuel_type' => 'regular',
                 'price' => fake()->randomFloat(2, 22, 24),
-                'changed_at' => now()
+                'changed_at' => now(),
             ]);
         }
 
         $response = $this->actingAs($this->user)
-            ->getJson('/api/v1/geo/heatmap?' . http_build_query([
+            ->getJson('/api/v1/geo/heatmap?'.http_build_query([
                 'north' => 19.5,
                 'south' => 19.3,
                 'east' => -99.0,
                 'west' => -99.2,
                 'zoom' => 12,
-                'fuel_type' => 'regular'
+                'fuel_type' => 'regular',
             ]));
 
         $response->assertStatus(200)
@@ -263,18 +263,18 @@ class GeoControllerTest extends TestCase
                             'price',
                             'intensity',
                             'color',
-                            'nearby_stations'
-                        ]
+                            'nearby_stations',
+                        ],
                     ],
                     'legend' => [
                         'fuel_type',
                         'min_price',
                         'max_price',
-                        'color_scale'
+                        'color_scale',
                     ],
                     'statistics',
-                    'timestamp'
-                ]
+                    'timestamp',
+                ],
             ]);
     }
 
@@ -285,14 +285,14 @@ class GeoControllerTest extends TestCase
         $station = Station::factory()->create([
             'entidad_id' => $estado->id,
             'municipio_id' => $municipio->id,
-            'is_active' => true
+            'is_active' => true,
         ]);
 
         PriceChange::factory()->create([
             'station_numero' => $station->numero,
             'fuel_type' => 'regular',
             'price' => 23.00,
-            'changed_at' => now()
+            'changed_at' => now(),
         ]);
 
         // First request
@@ -305,7 +305,7 @@ class GeoControllerTest extends TestCase
 
         $response1->assertStatus(200);
         $response2->assertStatus(200);
-        
+
         // Both responses should be identical
         $this->assertEquals(
             $response1->json(),
@@ -327,8 +327,8 @@ class GeoControllerTest extends TestCase
         $response = $this->actingAs($this->user)
             ->postJson('/api/v1/geo/compare', [
                 'areas' => [
-                    ['type' => 'invalid', 'id' => 1]
-                ]
+                    ['type' => 'invalid', 'id' => 1],
+                ],
             ]);
 
         $response->assertStatus(422)
@@ -338,12 +338,12 @@ class GeoControllerTest extends TestCase
     public function test_heatmap_validates_bounds()
     {
         $response = $this->actingAs($this->user)
-            ->getJson('/api/v1/geo/heatmap?' . http_build_query([
+            ->getJson('/api/v1/geo/heatmap?'.http_build_query([
                 'north' => 91,  // Invalid latitude
                 'south' => 19.3,
                 'east' => -99.0,
                 'west' => -99.2,
-                'zoom' => 12
+                'zoom' => 12,
             ]));
 
         $response->assertStatus(422)
@@ -370,7 +370,7 @@ class GeoControllerTest extends TestCase
 
     private function createStationsWithPrices($estadoId, $municipioId, $count, $basePrice)
     {
-        if (!$municipioId) {
+        if (! $municipioId) {
             $municipio = Municipio::factory()->create(['entidad_id' => $estadoId]);
             $municipioId = $municipio->id;
         }
@@ -378,7 +378,7 @@ class GeoControllerTest extends TestCase
         $stations = Station::factory()->count($count)->create([
             'entidad_id' => $estadoId,
             'municipio_id' => $municipioId,
-            'is_active' => true
+            'is_active' => true,
         ]);
 
         foreach ($stations as $station) {
@@ -386,7 +386,7 @@ class GeoControllerTest extends TestCase
                 'station_numero' => $station->numero,
                 'fuel_type' => 'regular',
                 'price' => $basePrice + fake()->randomFloat(2, -0.5, 0.5),
-                'changed_at' => now()
+                'changed_at' => now(),
             ]);
         }
     }

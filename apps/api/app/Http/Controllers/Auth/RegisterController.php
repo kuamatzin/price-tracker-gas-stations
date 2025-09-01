@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Models\Station;
 use App\Models\User;
 use App\Models\UserStation;
-use App\Models\Station;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -35,7 +35,7 @@ class RegisterController extends Controller
             // Associate user with station if provided
             if ($request->has('station_numero')) {
                 $station = Station::where('numero', $request->station_numero)->firstOrFail();
-                
+
                 UserStation::create([
                     'user_id' => $user->id,
                     'station_numero' => $station->numero,

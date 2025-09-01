@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\Station;
-use App\Models\User;
 use App\Models\Entidad;
 use App\Models\Municipio;
+use App\Models\Station;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +22,7 @@ class AuthenticationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         // Create test data
         $entidad = Entidad::create([
             'entidad_id' => 'CDMX',
@@ -141,13 +141,13 @@ class AuthenticationTest extends TestCase
     {
         $user = User::factory()->create();
         $token = $user->createToken('test-token');
-        
+
         // Manually expire the token
         DB::table('personal_access_tokens')
             ->where('id', $token->accessToken->id)
             ->update(['created_at' => now()->subDays(2)]);
 
-        $response = $this->withHeader('Authorization', 'Bearer ' . $token->plainTextToken)
+        $response = $this->withHeader('Authorization', 'Bearer '.$token->plainTextToken)
             ->getJson('/api/v1/profile');
 
         $response->assertStatus(401);
@@ -190,7 +190,7 @@ class AuthenticationTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        
+
         // Verify password was changed
         $user->refresh();
         $this->assertTrue(Hash::check('NewPass123!', $user->password));

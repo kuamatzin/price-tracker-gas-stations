@@ -72,7 +72,7 @@ class PasswordResetController extends Controller
             ->where('email', $request->email)
             ->first();
 
-        if (!$passwordReset || !Hash::check($request->token, $passwordReset->token)) {
+        if (! $passwordReset || ! Hash::check($request->token, $passwordReset->token)) {
             return response()->json([
                 'message' => 'El token de restablecimiento es inválido o ha expirado.',
             ], 400);
@@ -81,6 +81,7 @@ class PasswordResetController extends Controller
         // Check if token has expired (60 minutes)
         if (now()->diffInMinutes($passwordReset->created_at) > 60) {
             DB::table('password_resets')->where('email', $request->email)->delete();
+
             return response()->json([
                 'message' => 'El token de restablecimiento ha expirado.',
             ], 400);

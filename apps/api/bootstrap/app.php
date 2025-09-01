@@ -30,11 +30,11 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\LogRequests::class,
             \App\Http\Middleware\AttachUserContext::class,
         ]);
-        
+
         $middleware->api(append: [
             \App\Http\Middleware\RateLimitHeaders::class,
         ]);
-        
+
         $middleware->alias([
             'webhook.signature' => \App\Http\Middleware\VerifyWebhookSignature::class,
             'api.token' => \App\Http\Middleware\AuthenticateApiToken::class,
@@ -43,9 +43,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'performance.monitor' => \App\Http\Middleware\PerformanceMonitoring::class,
             'api.version' => \App\Http\Middleware\ApiVersion::class,
         ]);
-        
+
         $middleware->throttleApi('60,1');
-        
+
         $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions) {

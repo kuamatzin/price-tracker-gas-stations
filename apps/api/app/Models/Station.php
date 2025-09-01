@@ -10,7 +10,9 @@ class Station extends Model
     use HasFactory;
 
     protected $primaryKey = 'numero';
+
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     protected $fillable = [

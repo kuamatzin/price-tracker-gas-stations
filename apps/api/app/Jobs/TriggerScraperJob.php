@@ -8,8 +8,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Process;
 
 class TriggerScraperJob implements ShouldQueue
 {
@@ -55,7 +55,7 @@ class TriggerScraperJob implements ShouldQueue
 
         try {
             $command = config('scraper.command');
-            
+
             if ($this->dryRun) {
                 $command .= ' --dry-run';
             }
@@ -70,7 +70,7 @@ class TriggerScraperJob implements ShouldQueue
                     'job_id' => $this->jobId,
                     'output' => $result->output(),
                 ]);
-                
+
                 // The webhook will update the scraper run with final status
             } else {
                 Log::error('Scraper execution failed', [
@@ -89,11 +89,11 @@ class TriggerScraperJob implements ShouldQueue
                             'type' => 'EXECUTION_ERROR',
                             'message' => $result->errorOutput(),
                             'exit_code' => $result->exitCode(),
-                        ]
+                        ],
                     ],
                 ]);
 
-                throw new \Exception('Scraper execution failed with exit code: ' . $result->exitCode());
+                throw new \Exception('Scraper execution failed with exit code: '.$result->exitCode());
             }
         } catch (\Exception $e) {
             Log::error('Exception during scraper execution', [
@@ -111,7 +111,7 @@ class TriggerScraperJob implements ShouldQueue
                         [
                             'type' => 'EXCEPTION',
                             'message' => $e->getMessage(),
-                        ]
+                        ],
                     ],
                 ]);
             }

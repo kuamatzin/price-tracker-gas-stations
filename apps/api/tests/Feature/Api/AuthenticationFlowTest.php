@@ -2,11 +2,11 @@
 
 namespace Tests\Feature\Api;
 
-use Tests\TestCase;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Models\User;
-use Laravel\Sanctum\Sanctum;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\Sanctum;
+use Tests\TestCase;
 
 class AuthenticationFlowTest extends TestCase
 {
@@ -28,12 +28,12 @@ class AuthenticationFlowTest extends TestCase
 
         foreach ($protectedEndpoints as $endpoint) {
             $response = $this->json($endpoint['method'], $endpoint['url']);
-            
+
             $response->assertStatus(401);
             $response->assertJson([
                 'error' => [
-                    'code' => 'AUTHENTICATION_REQUIRED'
-                ]
+                    'code' => 'AUTHENTICATION_REQUIRED',
+                ],
             ]);
         }
     }
@@ -52,7 +52,7 @@ class AuthenticationFlowTest extends TestCase
 
         foreach ($publicEndpoints as $endpoint) {
             $response = $this->get($endpoint);
-            
+
             // Should not return 401
             $this->assertNotEquals(401, $response->status(),
                 "Public endpoint $endpoint returned 401");
@@ -69,7 +69,7 @@ class AuthenticationFlowTest extends TestCase
             'email' => 'test@example.com',
             'password' => 'password123',
             'password_confirmation' => 'password123',
-            'station_numero' => '12345'
+            'station_numero' => '12345',
         ]);
 
         $response->assertStatus(201);
@@ -80,15 +80,15 @@ class AuthenticationFlowTest extends TestCase
                     'name',
                     'email',
                 ],
-                'token'
-            ]
+                'token',
+            ],
         ]);
 
         // Verify user was created
         $this->assertDatabaseHas('users', [
             'email' => 'test@example.com',
             'name' => 'Test User',
-            'station_numero' => '12345'
+            'station_numero' => '12345',
         ]);
     }
 
@@ -99,20 +99,20 @@ class AuthenticationFlowTest extends TestCase
     {
         $user = User::factory()->create([
             'email' => 'test@example.com',
-            'password' => Hash::make('password123')
+            'password' => Hash::make('password123'),
         ]);
 
         $response = $this->postJson('/api/v1/auth/login', [
             'email' => 'test@example.com',
-            'password' => 'password123'
+            'password' => 'password123',
         ]);
 
         $response->assertStatus(200);
         $response->assertJsonStructure([
             'data' => [
                 'user',
-                'token'
-            ]
+                'token',
+            ],
         ]);
 
         $token = $response->json('data.token');
@@ -120,7 +120,7 @@ class AuthenticationFlowTest extends TestCase
 
         // Test that token works
         $authResponse = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $token
+            'Authorization' => 'Bearer '.$token,
         ])->get('/api/v1/prices/current');
 
         $this->assertNotEquals(401, $authResponse->status());
@@ -133,12 +133,12 @@ class AuthenticationFlowTest extends TestCase
     {
         $user = User::factory()->create([
             'email' => 'test@example.com',
-            'password' => Hash::make('password123')
+            'password' => Hash::make('password123'),
         ]);
 
         $response = $this->postJson('/api/v1/auth/login', [
             'email' => 'test@example.com',
-            'password' => 'wrongpassword'
+            'password' => 'wrongpassword',
         ]);
 
         $response->assertStatus(422);
@@ -157,7 +157,7 @@ class AuthenticationFlowTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertJson([
-            'message' => 'Successfully logged out'
+            'message' => 'Successfully logged out',
         ]);
     }
 
@@ -170,7 +170,7 @@ class AuthenticationFlowTest extends TestCase
         $token = $user->createToken('test-token')->plainTextToken;
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $token
+            'Authorization' => 'Bearer '.$token,
         ])->get('/api/v1/prices/current');
 
         $this->assertNotEquals(401, $response->status());
@@ -188,7 +188,7 @@ class AuthenticationFlowTest extends TestCase
         $user->tokens()->update(['expires_at' => now()->subDay()]);
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $token
+            'Authorization' => 'Bearer '.$token,
         ])->get('/api/v1/prices/current');
 
         $response->assertStatus(401);
@@ -200,17 +200,17 @@ class AuthenticationFlowTest extends TestCase
     public function test_password_reset_flow()
     {
         $user = User::factory()->create([
-            'email' => 'test@example.com'
+            'email' => 'test@example.com',
         ]);
 
         // Request password reset
         $response = $this->postJson('/api/v1/auth/forgot-password', [
-            'email' => 'test@example.com'
+            'email' => 'test@example.com',
         ]);
 
         $response->assertStatus(200);
         $response->assertJson([
-            'message' => 'Password reset link sent'
+            'message' => 'Password reset link sent',
         ]);
     }
 
@@ -254,7 +254,7 @@ class AuthenticationFlowTest extends TestCase
                 'station_numero',
                 'subscription_tier',
                 'created_at',
-            ]
+            ],
         ]);
     }
 }

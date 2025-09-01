@@ -2,35 +2,38 @@
 
 namespace Tests\Unit\Telegram\Commands;
 
-use Tests\TestCase;
-use App\Telegram\Commands\PreciosCommand;
+use App\Models\User;
+use App\Services\Telegram\InlineKeyboardBuilder;
 use App\Services\Telegram\PricingService;
 use App\Services\Telegram\TableFormatter;
-use App\Services\Telegram\InlineKeyboardBuilder;
-use App\Models\User;
+use App\Telegram\Commands\PreciosCommand;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
-use Telegram\Bot\Objects\Update;
-use Telegram\Bot\Objects\Message;
 use Telegram\Bot\Objects\Chat;
+use Telegram\Bot\Objects\Message;
+use Telegram\Bot\Objects\Update;
+use Tests\TestCase;
 
 class PreciosCommandTest extends TestCase
 {
     use RefreshDatabase;
 
     private $pricingService;
+
     private $formatter;
+
     private $keyboardBuilder;
+
     private $command;
 
     protected function setUp(): void
     {
         parent::setUp();
-        
+
         $this->pricingService = Mockery::mock(PricingService::class);
         $this->formatter = Mockery::mock(TableFormatter::class);
         $this->keyboardBuilder = Mockery::mock(InlineKeyboardBuilder::class);
-        
+
         $this->command = new PreciosCommand(
             $this->pricingService,
             $this->formatter,
@@ -48,7 +51,7 @@ class PreciosCommandTest extends TestCase
     {
         // Create test user
         $user = User::factory()->create([
-            'telegram_chat_id' => 123456
+            'telegram_chat_id' => 123456,
         ]);
 
         // Mock update
@@ -61,10 +64,10 @@ class PreciosCommandTest extends TestCase
             ->andReturn(collect());
 
         $this->command->setUpdate($update);
-        
+
         // Assert response contains error message
         $this->expectOutputRegex('/No tienes estaciones registradas/');
-        
+
         $this->command->handle();
     }
 
@@ -72,24 +75,24 @@ class PreciosCommandTest extends TestCase
     {
         // Create test user
         $user = User::factory()->create([
-            'telegram_chat_id' => 123456
+            'telegram_chat_id' => 123456,
         ]);
 
         // Mock station data
-        $station = (object)[
+        $station = (object) [
             'id' => 1,
             'alias' => 'oficina',
             'station_numero' => 'E12345',
             'nombre' => 'Pemex Centro',
             'direccion' => 'Av. Centro 123',
-            'is_default' => true
+            'is_default' => true,
         ];
 
         // Mock prices
         $prices = collect([
-            (object)['fuel_type' => 'regular', 'price' => 22.50],
-            (object)['fuel_type' => 'premium', 'price' => 24.80],
-            (object)['fuel_type' => 'diesel', 'price' => 23.60]
+            (object) ['fuel_type' => 'regular', 'price' => 22.50],
+            (object) ['fuel_type' => 'premium', 'price' => 24.80],
+            (object) ['fuel_type' => 'diesel', 'price' => 23.60],
         ]);
 
         // Mock update
@@ -113,11 +116,11 @@ class PreciosCommandTest extends TestCase
 
         $this->formatter->shouldReceive('formatStationPrices')
             ->once()
-            ->andReturn("💰 Precios Actuales - oficina");
+            ->andReturn('💰 Precios Actuales - oficina');
 
         $this->command->setUpdate($update);
         $this->command->handle();
-        
+
         $this->assertTrue(true); // Command executed without errors
     }
 
@@ -125,13 +128,13 @@ class PreciosCommandTest extends TestCase
     {
         // Create test user
         $user = User::factory()->create([
-            'telegram_chat_id' => 123456
+            'telegram_chat_id' => 123456,
         ]);
 
         // Mock stations
         $stations = collect([
-            (object)['id' => 1, 'alias' => 'oficina', 'station_numero' => 'E12345'],
-            (object)['id' => 2, 'alias' => 'casa', 'station_numero' => 'E67890']
+            (object) ['id' => 1, 'alias' => 'oficina', 'station_numero' => 'E12345'],
+            (object) ['id' => 2, 'alias' => 'casa', 'station_numero' => 'E67890'],
         ]);
 
         // Mock update with alias parameter
@@ -154,11 +157,11 @@ class PreciosCommandTest extends TestCase
 
         $this->formatter->shouldReceive('formatStationPrices')
             ->once()
-            ->andReturn("Prices for casa");
+            ->andReturn('Prices for casa');
 
         $this->command->setUpdate($update);
         $this->command->handle();
-        
+
         $this->assertTrue(true);
     }
 
@@ -166,14 +169,14 @@ class PreciosCommandTest extends TestCase
     {
         // Create test user
         $user = User::factory()->create([
-            'telegram_chat_id' => 123456
+            'telegram_chat_id' => 123456,
         ]);
 
         // Mock station
-        $station = (object)[
+        $station = (object) [
             'id' => 1,
             'alias' => 'oficina',
-            'station_numero' => 'E12345'
+            'station_numero' => 'E12345',
         ];
 
         // Mock update with fuel type
@@ -188,7 +191,7 @@ class PreciosCommandTest extends TestCase
             ->once()
             ->with('E12345', 'premium')
             ->andReturn(collect([
-                (object)['fuel_type' => 'premium', 'price' => 24.80]
+                (object) ['fuel_type' => 'premium', 'price' => 24.80],
             ]));
 
         $this->pricingService->shouldReceive('getPriceHistory')
@@ -197,11 +200,11 @@ class PreciosCommandTest extends TestCase
 
         $this->formatter->shouldReceive('formatStationPrices')
             ->once()
-            ->andReturn("Premium prices");
+            ->andReturn('Premium prices');
 
         $this->command->setUpdate($update);
         $this->command->handle();
-        
+
         $this->assertTrue(true);
     }
 
@@ -209,13 +212,13 @@ class PreciosCommandTest extends TestCase
     {
         // Create test user
         $user = User::factory()->create([
-            'telegram_chat_id' => 123456
+            'telegram_chat_id' => 123456,
         ]);
 
         // Mock stations without default
         $stations = collect([
-            (object)['id' => 1, 'alias' => 'oficina', 'is_default' => false],
-            (object)['id' => 2, 'alias' => 'casa', 'is_default' => false]
+            (object) ['id' => 1, 'alias' => 'oficina', 'is_default' => false],
+            (object) ['id' => 2, 'alias' => 'casa', 'is_default' => false],
         ]);
 
         // Mock update
@@ -232,10 +235,10 @@ class PreciosCommandTest extends TestCase
             ->andReturn('{"inline_keyboard":[]}');
 
         $this->command->setUpdate($update);
-        
+
         // Should show selection keyboard
         $this->expectOutputRegex('/Selecciona una estación/');
-        
+
         $this->command->handle();
     }
 
@@ -243,13 +246,13 @@ class PreciosCommandTest extends TestCase
     {
         // Create test user
         $user = User::factory()->create([
-            'telegram_chat_id' => 123456
+            'telegram_chat_id' => 123456,
         ]);
 
         // Mock stations
         $stations = collect([
-            (object)['id' => 1, 'alias' => 'oficina'],
-            (object)['id' => 2, 'alias' => 'casa']
+            (object) ['id' => 1, 'alias' => 'oficina'],
+            (object) ['id' => 2, 'alias' => 'casa'],
         ]);
 
         // Mock update with invalid alias
@@ -261,10 +264,10 @@ class PreciosCommandTest extends TestCase
             ->andReturn($stations);
 
         $this->command->setUpdate($update);
-        
+
         // Should show error
         $this->expectOutputRegex('/No encontré la estación/');
-        
+
         $this->command->handle();
     }
 
@@ -273,17 +276,17 @@ class PreciosCommandTest extends TestCase
         $update = Mockery::mock(Update::class);
         $message = Mockery::mock(Message::class);
         $chat = Mockery::mock(Chat::class);
-        
+
         $chat->shouldReceive('getId')->andReturn($chatId);
         $message->shouldReceive('getChat')->andReturn($chat);
         $message->shouldReceive('getText')->andReturn($text);
         $update->shouldReceive('getMessage')->andReturn($message);
-        
+
         // Mock arguments parsing
         $parts = explode(' ', $text);
         array_shift($parts); // Remove command
         $update->shouldReceive('getMessage->getText')->andReturn($text);
-        
+
         return $update;
     }
 }

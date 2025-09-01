@@ -27,8 +27,8 @@ class StationRepository
             ->where('is_active', true)
             ->where(function ($query) use ($searchTerm) {
                 $query->where('nombre', 'LIKE', "%{$searchTerm}%")
-                      ->orWhere('direccion', 'LIKE', "%{$searchTerm}%")
-                      ->orWhere('brand', 'LIKE', "%{$searchTerm}%");
+                    ->orWhere('direccion', 'LIKE', "%{$searchTerm}%")
+                    ->orWhere('brand', 'LIKE', "%{$searchTerm}%");
             })
             ->limit($limit)
             ->get();
@@ -46,9 +46,9 @@ class StationRepository
         $query = DB::table('stations')
             ->select([
                 '*',
-                DB::raw("(6371 * acos(cos(radians(?)) * cos(radians(lat)) * 
+                DB::raw('(6371 * acos(cos(radians(?)) * cos(radians(lat)) * 
                         cos(radians(lng) - radians(?)) + sin(radians(?)) * 
-                        sin(radians(lat)))) as distance")
+                        sin(radians(lat)))) as distance'),
             ])
             ->addBinding([$lat, $lng, $lat], 'select')
             ->where('is_active', true)

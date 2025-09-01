@@ -27,15 +27,15 @@ class RefreshCompetitorPricesView extends Command
     public function handle(): int
     {
         $this->info('Refreshing competitor_current_prices materialized view...');
-        
+
         try {
             DB::statement('REFRESH MATERIALIZED VIEW CONCURRENTLY competitor_current_prices');
             $this->info('Materialized view refreshed successfully.');
-            
+
             return Command::SUCCESS;
         } catch (\Exception $e) {
-            $this->error('Failed to refresh materialized view: ' . $e->getMessage());
-            
+            $this->error('Failed to refresh materialized view: '.$e->getMessage());
+
             return Command::FAILURE;
         }
     }

@@ -2,8 +2,8 @@
 
 namespace Tests\Unit;
 
-use PHPUnit\Framework\TestCase;
 use App\Helpers\FuelTypeMapper;
+use PHPUnit\Framework\TestCase;
 
 class FuelTypeMapperTest extends TestCase
 {
@@ -83,7 +83,7 @@ class FuelTypeMapperTest extends TestCase
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage("Unable to map SubProducto 'Unknown Fuel Type' to fuel type");
-        
+
         FuelTypeMapper::mapToFuelType('Unknown Fuel Type');
     }
 
@@ -111,8 +111,8 @@ class FuelTypeMapperTest extends TestCase
     public function test_get_known_variations_throws_for_invalid_type(): void
     {
         $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage("Invalid fuel type: invalid");
-        
+        $this->expectExceptionMessage('Invalid fuel type: invalid');
+
         FuelTypeMapper::getKnownVariations('invalid');
     }
 
@@ -124,7 +124,7 @@ class FuelTypeMapperTest extends TestCase
         $this->assertTrue(FuelTypeMapper::isValidFuelType('regular'));
         $this->assertTrue(FuelTypeMapper::isValidFuelType('premium'));
         $this->assertTrue(FuelTypeMapper::isValidFuelType('diesel'));
-        
+
         $this->assertFalse(FuelTypeMapper::isValidFuelType('invalid'));
         $this->assertFalse(FuelTypeMapper::isValidFuelType(''));
         $this->assertFalse(FuelTypeMapper::isValidFuelType('REGULAR'));

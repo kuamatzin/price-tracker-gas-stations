@@ -16,13 +16,13 @@ class AuthenticateApiToken
     {
         $token = $this->extractToken($request);
 
-        if (!$token) {
+        if (! $token) {
             throw new UnauthorizedHttpException('', 'API token required');
         }
 
         $apiToken = ApiToken::findByToken($token);
 
-        if (!$apiToken) {
+        if (! $apiToken) {
             throw new UnauthorizedHttpException('', 'Invalid API token');
         }
 
@@ -32,7 +32,7 @@ class AuthenticateApiToken
 
         // Check abilities if specified
         foreach ($abilities as $ability) {
-            if (!$apiToken->can($ability)) {
+            if (! $apiToken->can($ability)) {
                 throw new UnauthorizedHttpException('', 'Insufficient permissions');
             }
         }

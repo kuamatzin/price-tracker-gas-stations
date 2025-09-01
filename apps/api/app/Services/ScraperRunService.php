@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\ScraperRun;
 use App\Jobs\ScraperFailureJob;
+use App\Models\ScraperRun;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -58,7 +58,7 @@ class ScraperRunService
     {
         $lastRun = ScraperRun::lastSuccessful();
 
-        if (!$lastRun) {
+        if (! $lastRun) {
             return true; // No successful runs means data is stale
         }
 
@@ -74,7 +74,7 @@ class ScraperRunService
     {
         $lastRun = ScraperRun::lastSuccessful();
 
-        if (!$lastRun) {
+        if (! $lastRun) {
             return [
                 'is_stale' => true,
                 'last_run' => null,
@@ -90,7 +90,7 @@ class ScraperRunService
             'is_stale' => $isStale,
             'last_run' => $lastRun->completed_at->toIso8601String(),
             'hours_ago' => round($hoursSinceLastRun, 1),
-            'message' => $isStale 
+            'message' => $isStale
                 ? "Data is stale (last update {$hoursSinceLastRun} hours ago)"
                 : "Data is fresh (last update {$hoursSinceLastRun} hours ago)",
         ];

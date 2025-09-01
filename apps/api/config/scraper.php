@@ -12,13 +12,13 @@ return [
     */
 
     'run_time' => env('SCRAPER_RUN_TIME', '05:00'),
-    
+
     'webhook_secret' => env('SCRAPER_WEBHOOK_SECRET'),
 
     'command' => env('SCRAPER_COMMAND', 'cd ../scraper && npm run scrape'),
 
     'timeout' => env('SCRAPER_TIMEOUT', 3600), // 1 hour default
-    
+
     'max_retries' => env('SCRAPER_MAX_RETRIES', 3),
 
     'data_stale_hours' => env('DATA_STALE_HOURS', 25),

@@ -2,13 +2,14 @@
 
 namespace App\Telegram\Commands;
 
-use Telegram\Bot\Commands\Command;
 use App\Services\Telegram\SessionManager;
 use App\Services\Telegram\TranslationService;
+use Telegram\Bot\Commands\Command;
 
 abstract class BaseCommand extends Command
 {
     protected ?SessionManager $sessionManager = null;
+
     protected ?TranslationService $translator = null;
 
     public function __construct()
@@ -23,6 +24,7 @@ abstract class BaseCommand extends Command
     protected function getUserLanguage($userId): string
     {
         $session = $this->sessionManager->getSession($userId);
+
         return $session->get('language', 'es');
     }
 
@@ -32,6 +34,7 @@ abstract class BaseCommand extends Command
     protected function trans(string $key, array $params = [], ?int $userId = null): string
     {
         $lang = $userId ? $this->getUserLanguage($userId) : 'es';
+
         return $this->translator->get($key, $params, $lang);
     }
 
@@ -42,7 +45,7 @@ abstract class BaseCommand extends Command
     {
         $this->telegram->sendChatAction([
             'chat_id' => $chatId,
-            'action' => 'typing'
+            'action' => 'typing',
         ]);
     }
 
@@ -52,11 +55,11 @@ abstract class BaseCommand extends Command
     protected function replyWithError(string $message, $chatId = null): void
     {
         $chatId = $chatId ?? $this->getUpdate()->getMessage()->getChat()->getId();
-        
+
         $this->replyWithMessage([
             'chat_id' => $chatId,
-            'text' => "❌ " . $message,
-            'parse_mode' => 'Markdown'
+            'text' => '❌ '.$message,
+            'parse_mode' => 'Markdown',
         ]);
     }
 
@@ -66,11 +69,11 @@ abstract class BaseCommand extends Command
     protected function replyWithSuccess(string $message, $chatId = null): void
     {
         $chatId = $chatId ?? $this->getUpdate()->getMessage()->getChat()->getId();
-        
+
         $this->replyWithMessage([
             'chat_id' => $chatId,
-            'text' => "✅ " . $message,
-            'parse_mode' => 'Markdown'
+            'text' => '✅ '.$message,
+            'parse_mode' => 'Markdown',
         ]);
     }
 
@@ -81,13 +84,13 @@ abstract class BaseCommand extends Command
     {
         $message = $this->getUpdate()->getMessage();
         $callbackQuery = $this->getUpdate()->getCallbackQuery();
-        
+
         if ($message) {
             return $message->getFrom()->getId();
         } elseif ($callbackQuery) {
             return $callbackQuery->getFrom()->getId();
         }
-        
+
         return null;
     }
 
@@ -98,13 +101,13 @@ abstract class BaseCommand extends Command
     {
         $message = $this->getUpdate()->getMessage();
         $callbackQuery = $this->getUpdate()->getCallbackQuery();
-        
+
         if ($message) {
             return $message->getChat()->getId();
         } elseif ($callbackQuery) {
             return $callbackQuery->getMessage()->getChat()->getId();
         }
-        
+
         return null;
     }
 }

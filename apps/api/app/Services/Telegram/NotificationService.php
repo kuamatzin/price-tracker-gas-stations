@@ -2,22 +2,21 @@
 
 namespace App\Services\Telegram;
 
-use App\Models\User;
-use App\Models\Station;
 use App\Models\PriceChange;
-use App\Services\Telegram\AnalyticsService;
-use App\Services\Telegram\SparklineGenerator;
-use Telegram\Bot\Laravel\Facades\Telegram;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
+use App\Models\Station;
+use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
+use Telegram\Bot\Laravel\Facades\Telegram;
 
 class NotificationService
 {
     private AnalyticsService $analyticsService;
+
     private SparklineGenerator $sparklineGenerator;
-    
+
     public function __construct(
         AnalyticsService $analyticsService,
         SparklineGenerator $sparklineGenerator
@@ -33,14 +32,15 @@ class NotificationService
     {
         try {
             // Check if user has telegram chat ID
-            if (!$user->telegram_chat_id) {
+            if (! $user->telegram_chat_id) {
                 Log::warning('User has no telegram chat ID', ['user_id' => $user->id]);
+
                 return false;
             }
 
             // Check if daily summary is enabled
             $preferences = $user->notification_preferences ?? [];
-            if (!($preferences['daily_summary_enabled'] ?? true)) {
+            if (! ($preferences['daily_summary_enabled'] ?? true)) {
                 return false;
             }
 
@@ -51,39 +51,40 @@ class NotificationService
 
             // Get primary station
             $stationId = $preferences['primary_station_id'] ?? null;
-            if (!$stationId) {
+            if (! $stationId) {
                 // Try to get default station
                 $defaultStation = $user->stations()
                     ->wherePivot('is_default', true)
                     ->first();
-                
-                if (!$defaultStation) {
+
+                if (! $defaultStation) {
                     Log::warning('User has no primary station for daily summary', ['user_id' => $user->id]);
+
                     return false;
                 }
-                
+
                 $stationId = $defaultStation->id;
             }
 
             $station = Station::find($stationId);
-            if (!$station) {
+            if (! $station) {
                 return false;
             }
 
             // Generate summary content
             $summary = $this->generateDailySummary($user, $station);
-            
+
             // Send via Telegram
             Telegram::sendMessage([
                 'chat_id' => $user->telegram_chat_id,
                 'text' => $summary,
-                'parse_mode' => 'Markdown'
+                'parse_mode' => 'Markdown',
             ]);
 
             // Log successful send
             Log::info('Daily summary sent', [
                 'user_id' => $user->id,
-                'station_id' => $station->id
+                'station_id' => $station->id,
             ]);
 
             return true;
@@ -91,8 +92,9 @@ class NotificationService
         } catch (\Exception $e) {
             Log::error('Failed to send daily summary', [
                 'user_id' => $user->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
@@ -104,13 +106,13 @@ class NotificationService
     {
         try {
             // Check if user has telegram chat ID
-            if (!$user->telegram_chat_id) {
+            if (! $user->telegram_chat_id) {
                 return false;
             }
 
             // Check if price alerts are enabled
             $preferences = $user->notification_preferences ?? [];
-            if (!($preferences['price_alerts_enabled'] ?? true)) {
+            if (! ($preferences['price_alerts_enabled'] ?? true)) {
                 return false;
             }
 
@@ -120,18 +122,18 @@ class NotificationService
             }
 
             // Check alert frequency
-            if (!$this->shouldSendAlert($user, 'price_alert')) {
+            if (! $this->shouldSendAlert($user, 'price_alert')) {
                 return false;
             }
 
             // Generate alert content
             $alert = $this->generatePriceAlert($user, $station, $priceChanges);
-            
+
             // Send via Telegram
             Telegram::sendMessage([
                 'chat_id' => $user->telegram_chat_id,
                 'text' => $alert,
-                'parse_mode' => 'Markdown'
+                'parse_mode' => 'Markdown',
             ]);
 
             // Update last alert time
@@ -141,7 +143,7 @@ class NotificationService
             Log::info('Price alert sent', [
                 'user_id' => $user->id,
                 'station_id' => $station->id,
-                'changes' => $priceChanges
+                'changes' => $priceChanges,
             ]);
 
             return true;
@@ -150,8 +152,9 @@ class NotificationService
             Log::error('Failed to send price alert', [
                 'user_id' => $user->id,
                 'station_id' => $station->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
@@ -163,13 +166,13 @@ class NotificationService
     {
         try {
             // Check if user has telegram chat ID
-            if (!$user->telegram_chat_id) {
+            if (! $user->telegram_chat_id) {
                 return false;
             }
 
             // Check if recommendations are enabled
             $preferences = $user->notification_preferences ?? [];
-            if (!($preferences['recommendations_enabled'] ?? true)) {
+            if (! ($preferences['recommendations_enabled'] ?? true)) {
                 return false;
             }
 
@@ -179,7 +182,7 @@ class NotificationService
             }
 
             // Check recommendation frequency
-            if (!$this->shouldSendRecommendation($user)) {
+            if (! $this->shouldSendRecommendation($user)) {
                 return false;
             }
 
@@ -187,12 +190,12 @@ class NotificationService
             $message = "💡 **Recomendación Inteligente**\n\n";
             $message .= $recommendation;
             $message .= "\n\n_Basado en tu historial y preferencias_";
-            
+
             // Send via Telegram
             Telegram::sendMessage([
                 'chat_id' => $user->telegram_chat_id,
                 'text' => $message,
-                'parse_mode' => 'Markdown'
+                'parse_mode' => 'Markdown',
             ]);
 
             // Update last recommendation time
@@ -200,7 +203,7 @@ class NotificationService
 
             // Log successful send
             Log::info('Recommendation sent', [
-                'user_id' => $user->id
+                'user_id' => $user->id,
             ]);
 
             return true;
@@ -208,8 +211,9 @@ class NotificationService
         } catch (\Exception $e) {
             Log::error('Failed to send recommendation', [
                 'user_id' => $user->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
+
             return false;
         }
     }
@@ -224,9 +228,9 @@ class NotificationService
             ->where('station_id', $station->id)
             ->withPivot('alias')
             ->first();
-        
+
         $stationAlias = $userStation->pivot->alias ?? $station->nombre;
-        
+
         // Get current prices
         $prices = PriceChange::where('station_id', $station->id)
             ->whereIn('fuel_type', ['regular', 'premium', 'diesel'])
@@ -242,48 +246,48 @@ class NotificationService
         foreach (['regular', 'premium', 'diesel'] as $type) {
             if (isset($prices[$type])) {
                 $price = $prices[$type];
-                
+
                 // Get price change
                 $previousPrice = PriceChange::where('station_id', $station->id)
                     ->where('fuel_type', $type)
                     ->where('changed_at', '<', $price->changed_at)
                     ->orderBy('changed_at', 'desc')
                     ->first();
-                
+
                 $indicator = '➡️';
                 $changeText = 'Sin cambio';
-                
+
                 if ($previousPrice) {
                     $change = $price->price - $previousPrice->price;
                     $changePercent = ($change / $previousPrice->price) * 100;
-                    
+
                     if ($change > 0) {
                         $indicator = '📈';
-                        $changeText = sprintf("+%.2f%%", $changePercent);
+                        $changeText = sprintf('+%.2f%%', $changePercent);
                     } elseif ($change < 0) {
                         $indicator = '📉';
-                        $changeText = sprintf("%.2f%%", $changePercent);
+                        $changeText = sprintf('%.2f%%', $changePercent);
                     }
                 }
-                
+
                 $formattedPrices[$type] = [
                     'price' => $price->price,
                     'indicator' => $indicator,
-                    'change' => $changeText
+                    'change' => $changeText,
                 ];
             }
         }
-        
+
         // Get competitive position
         $preferences = $user->notification_preferences ?? [];
         $radius = $preferences['alert_radius_km'] ?? 5;
-        
+
         $analytics = $this->analyticsService->getStationAnalytics($station->id, $radius);
         $ranking = $analytics && isset($analytics['ranking']) ? $analytics['ranking']['summary'] : null;
-        
+
         // Get recommendation
         $recommendation = $this->generateSmartRecommendation($user, $station, $prices);
-        
+
         // Render template
         return View::make('telegram.daily-summary', [
             'station_alias' => $stationAlias,
@@ -293,7 +297,7 @@ class NotificationService
             'trend_analysis' => null, // Could be added from analytics
             'recommendation' => $recommendation,
             'nearby_stations' => [], // Could be added
-            'savings_opportunity' => null // Could be calculated
+            'savings_opportunity' => null, // Could be calculated
         ])->render();
     }
 
@@ -306,45 +310,45 @@ class NotificationService
             ->where('station_id', $station->id)
             ->withPivot('alias')
             ->first();
-        
+
         $stationAlias = $userStation->pivot->alias ?? $station->nombre;
-        
+
         $message = "🚨 **Alerta de Cambio de Precio**\n\n";
         $message .= "📍 Estación: {$stationAlias}\n";
-        $message .= "⏰ " . Carbon::now('America/Mexico_City')->format('d/m/Y H:i') . "\n\n";
-        
+        $message .= '⏰ '.Carbon::now('America/Mexico_City')->format('d/m/Y H:i')."\n\n";
+
         $message .= "💰 **Cambios detectados:**\n";
-        
+
         foreach ($priceChanges as $change) {
             $fuelType = ucfirst($change['fuel_type']);
-            $oldPrice = sprintf("$%.2f", $change['old_price']);
-            $newPrice = sprintf("$%.2f", $change['new_price']);
+            $oldPrice = sprintf('$%.2f', $change['old_price']);
+            $newPrice = sprintf('$%.2f', $change['new_price']);
             $difference = $change['new_price'] - $change['old_price'];
             $percentage = ($difference / $change['old_price']) * 100;
-            
+
             if ($difference > 0) {
                 $emoji = '📈';
-                $changeText = sprintf("+$%.2f (+%.1f%%)", $difference, $percentage);
+                $changeText = sprintf('+$%.2f (+%.1f%%)', $difference, $percentage);
             } else {
                 $emoji = '📉';
-                $changeText = sprintf("-$%.2f (%.1f%%)", abs($difference), $percentage);
+                $changeText = sprintf('-$%.2f (%.1f%%)', abs($difference), $percentage);
             }
-            
+
             $message .= "{$emoji} {$fuelType}: {$oldPrice} → {$newPrice} ({$changeText})\n";
         }
-        
+
         // Add context
         $preferences = $user->notification_preferences ?? [];
         $radius = $preferences['alert_radius_km'] ?? 5;
-        
+
         $competitorAnalysis = $this->analyzeCompetitorPrices($station, $radius);
         if ($competitorAnalysis) {
             $message .= "\n📊 **Comparación con competencia:**\n";
             $message .= $competitorAnalysis;
         }
-        
+
         $message .= "\n_Usa /precios para ver más detalles_";
-        
+
         return $message;
     }
 
@@ -355,23 +359,23 @@ class NotificationService
     {
         // This would integrate with DeepSeek or another AI service
         // For now, return a simple recommendation
-        
+
         $dayOfWeek = Carbon::now('America/Mexico_City')->dayOfWeek;
         $hour = Carbon::now('America/Mexico_City')->hour;
-        
+
         $recommendations = [
-            "Considera cargar combustible hoy, los precios suelen subir los fines de semana.",
-            "Los precios están estables esta semana. No hay urgencia para cargar.",
-            "Detectamos una tendencia alcista. Recomendamos cargar pronto.",
-            "Hay estaciones más económicas a {radius}km. Usa /competencia para verlas.",
-            "Tu estación tiene precios competitivos comparado con el promedio de la zona."
+            'Considera cargar combustible hoy, los precios suelen subir los fines de semana.',
+            'Los precios están estables esta semana. No hay urgencia para cargar.',
+            'Detectamos una tendencia alcista. Recomendamos cargar pronto.',
+            'Hay estaciones más económicas a {radius}km. Usa /competencia para verlas.',
+            'Tu estación tiene precios competitivos comparado con el promedio de la zona.',
         ];
-        
+
         // Simple logic for demo
         if ($dayOfWeek >= 4 && $dayOfWeek <= 5) { // Thursday or Friday
             return $recommendations[0];
         }
-        
+
         return $recommendations[array_rand($recommendations)];
     }
 
@@ -381,13 +385,13 @@ class NotificationService
     private function isInSilencePeriod(User $user): bool
     {
         $preferences = $user->notification_preferences ?? [];
-        
-        if (!isset($preferences['silence_until'])) {
+
+        if (! isset($preferences['silence_until'])) {
             return false;
         }
-        
+
         $silenceUntil = Carbon::parse($preferences['silence_until']);
-        
+
         return $silenceUntil->isFuture();
     }
 
@@ -398,21 +402,21 @@ class NotificationService
     {
         $preferences = $user->notification_preferences ?? [];
         $frequency = $preferences['alert_frequency'] ?? 'instant';
-        
+
         if ($frequency === 'instant') {
             return true;
         }
-        
+
         $cacheKey = "user:last_alert:{$user->id}:{$alertType}";
         $lastSent = Cache::get($cacheKey);
-        
-        if (!$lastSent) {
+
+        if (! $lastSent) {
             return true;
         }
-        
+
         $lastSentTime = Carbon::parse($lastSent);
         $now = Carbon::now();
-        
+
         switch ($frequency) {
             case 'hourly':
                 return $lastSentTime->diffInHours($now) >= 1;
@@ -432,17 +436,17 @@ class NotificationService
     {
         $preferences = $user->notification_preferences ?? [];
         $frequency = $preferences['recommendation_frequency'] ?? 'daily';
-        
+
         $cacheKey = "user:last_recommendation:{$user->id}";
         $lastSent = Cache::get($cacheKey);
-        
-        if (!$lastSent) {
+
+        if (! $lastSent) {
             return true;
         }
-        
+
         $lastSentTime = Carbon::parse($lastSent);
         $now = Carbon::now();
-        
+
         switch ($frequency) {
             case 'daily':
                 return $lastSentTime->diffInDays($now) >= 1;
@@ -482,38 +486,38 @@ class NotificationService
     {
         // Get nearby stations
         $nearbyStations = Station::selectRaw(
-            "*, ST_Distance_Sphere(location, ?) as distance",
+            '*, ST_Distance_Sphere(location, ?) as distance',
             [$station->location]
         )
-        ->where('id', '!=', $station->id)
-        ->having('distance', '<=', $radius * 1000)
-        ->orderBy('distance')
-        ->limit(5)
-        ->get();
-        
+            ->where('id', '!=', $station->id)
+            ->having('distance', '<=', $radius * 1000)
+            ->orderBy('distance')
+            ->limit(5)
+            ->get();
+
         if ($nearbyStations->isEmpty()) {
             return null;
         }
-        
+
         // Get current prices for comparison
         $stationPrice = PriceChange::where('station_id', $station->id)
             ->where('fuel_type', 'regular')
             ->orderBy('changed_at', 'desc')
             ->first();
-        
-        if (!$stationPrice) {
+
+        if (! $stationPrice) {
             return null;
         }
-        
+
         $cheaper = 0;
         $moreExpensive = 0;
-        
+
         foreach ($nearbyStations as $nearbyStation) {
             $nearbyPrice = PriceChange::where('station_id', $nearbyStation->id)
                 ->where('fuel_type', 'regular')
                 ->orderBy('changed_at', 'desc')
                 ->first();
-            
+
             if ($nearbyPrice) {
                 if ($nearbyPrice->price < $stationPrice->price) {
                     $cheaper++;
@@ -522,13 +526,13 @@ class NotificationService
                 }
             }
         }
-        
+
         if ($cheaper > 0) {
             return "Hay {$cheaper} estaciones más económicas cerca.";
         } elseif ($moreExpensive > 0) {
             return "Tu estación tiene mejor precio que {$moreExpensive} estaciones cercanas.";
         }
-        
-        return "Tu estación tiene precios promedio en la zona.";
+
+        return 'Tu estación tiene precios promedio en la zona.';
     }
 }

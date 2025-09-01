@@ -9,9 +9,11 @@ use Telegram\Bot\Commands\Command;
 class RankingCommand extends Command
 {
     protected string $name = 'ranking';
+
     protected string $description = 'Ver tu posición competitiva entre competidores';
-    
+
     private AnalyticsService $analyticsService;
+
     private PricingService $pricingService;
 
     public function __construct(
@@ -25,22 +27,23 @@ class RankingCommand extends Command
     public function handle(): void
     {
         $chatId = $this->getUpdate()->getMessage()->getChat()->getId();
-        
+
         try {
             $userId = $this->getUserId($chatId);
         } catch (\Exception $e) {
             $this->replyWithMessage([
-                'text' => "❌ Usuario no registrado. Usa /start para registrarte."
+                'text' => '❌ Usuario no registrado. Usa /start para registrarte.',
             ]);
+
             return;
         }
-        
+
         $arguments = $this->getArguments();
 
         // Parse arguments for station alias and radius
         $stationAlias = null;
         $radiusKm = 5; // Default 5km radius
-        
+
         foreach ($arguments as $arg) {
             if (is_numeric($arg) && $arg > 0 && $arg <= 20) {
                 $radiusKm = (float) $arg;
@@ -53,32 +56,34 @@ class RankingCommand extends Command
             // Send typing action
             $this->telegram->sendChatAction([
                 'chat_id' => $chatId,
-                'action' => 'typing'
+                'action' => 'typing',
             ]);
 
             $userStations = $this->pricingService->getUserStations($userId);
 
             if ($userStations->isEmpty()) {
                 $this->replyWithMessage([
-                    'text' => "❌ No tienes estaciones registradas.\n\nUsa /registrar para agregar tu primera estación."
+                    'text' => "❌ No tienes estaciones registradas.\n\nUsa /registrar para agregar tu primera estación.",
                 ]);
+
                 return;
             }
 
             // Determine which station to use
             $selectedStation = $this->selectStation($userStations, $stationAlias);
-            
-            if (!$selectedStation) {
+
+            if (! $selectedStation) {
                 if ($stationAlias) {
                     $this->replyWithMessage([
-                        'text' => "❌ No encontré la estación '$stationAlias'.\n\n" .
-                                 "Tus estaciones: " . $userStations->pluck('alias')->implode(', ')
+                        'text' => "❌ No encontré la estación '$stationAlias'.\n\n".
+                                 'Tus estaciones: '.$userStations->pluck('alias')->implode(', '),
                     ]);
                 } else {
                     $this->replyWithMessage([
-                        'text' => "❌ No se pudo determinar la estación. Especifica un alias."
+                        'text' => '❌ No se pudo determinar la estación. Especifica un alias.',
                     ]);
                 }
+
                 return;
             }
 
@@ -90,8 +95,9 @@ class RankingCommand extends Command
 
             if (empty($ranking['rankings'])) {
                 $this->replyWithMessage([
-                    'text' => "❌ No hay suficientes datos de competidores para generar el ranking."
+                    'text' => '❌ No hay suficientes datos de competidores para generar el ranking.',
                 ]);
+
                 return;
             }
 
@@ -104,18 +110,18 @@ class RankingCommand extends Command
 
             $this->replyWithMessage([
                 'text' => $response,
-                'parse_mode' => 'Markdown'
+                'parse_mode' => 'Markdown',
             ]);
 
         } catch (\Exception $e) {
             \Log::error('RankingCommand error', [
                 'chat_id' => $chatId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             $this->replyWithMessage([
-                'text' => "❌ Ocurrió un error al calcular el ranking. Por favor intenta más tarde."
+                'text' => '❌ Ocurrió un error al calcular el ranking. Por favor intenta más tarde.',
             ]);
         }
     }
@@ -123,11 +129,11 @@ class RankingCommand extends Command
     private function getUserId(int $chatId): int
     {
         $user = \App\Models\User::where('telegram_chat_id', $chatId)->first();
-        
-        if (!$user) {
+
+        if (! $user) {
             throw new \Exception('Usuario no registrado');
         }
-        
+
         return $user->id;
     }
 
@@ -147,13 +153,13 @@ class RankingCommand extends Command
     private function formatResponse($station, array $rankings, float $radiusKm): string
     {
         $stationName = $station->alias ?? $station->station_name;
-        
+
         $response = "🏆 *Tu Posición Competitiva*\n";
         $response .= "📍 Estación: {$stationName}\n";
         $response .= "📏 Radio: {$radiusKm}km\n\n";
 
         if (empty($rankings)) {
-            return $response . "No hay datos de ranking disponibles.";
+            return $response.'No hay datos de ranking disponibles.';
         }
 
         // Process each fuel type
@@ -181,29 +187,29 @@ class RankingCommand extends Command
 
         // Determine position quality
         $positionEmoji = $this->getPositionEmoji($percentile);
-        
+
         $response = "*{$fuelName}:* #{$position} de {$total} {$positionEmoji}\n";
-        $response .= "  Tu precio: $" . number_format($yourPrice, 2) . "\n";
-        $response .= "  Promedio: $" . number_format($avgPrice, 2) . "\n";
-        
+        $response .= '  Tu precio: $'.number_format($yourPrice, 2)."\n";
+        $response .= '  Promedio: $'.number_format($avgPrice, 2)."\n";
+
         if ($priceDiff != 0) {
             $sign = $priceDiff > 0 ? '+' : '';
-            $response .= "  Diferencia: {$sign}$" . number_format($priceDiff, 2);
-            $response .= " ({$sign}" . number_format($priceDiffPercent, 1) . "%)\n";
+            $response .= "  Diferencia: {$sign}$".number_format($priceDiff, 2);
+            $response .= " ({$sign}".number_format($priceDiffPercent, 1)."%)\n";
         }
 
         // Show top competitors if not in top 3
-        if ($position > 3 && !empty($data['top_competitors'])) {
+        if ($position > 3 && ! empty($data['top_competitors'])) {
             $response .= "  *Top 3:*\n";
             foreach ($data['top_competitors'] as $competitor) {
-                $mark = $competitor['is_target'] ?? false ? " ← Tú" : "";
+                $mark = $competitor['is_target'] ?? false ? ' ← Tú' : '';
                 $response .= "    {$competitor['position']}. {$competitor['brand']} - $";
-                $response .= number_format($competitor['price'], 2) . $mark . "\n";
+                $response .= number_format($competitor['price'], 2).$mark."\n";
             }
         }
 
         // Add specific recommendation
-        if (!empty($data['recommendation'])) {
+        if (! empty($data['recommendation'])) {
             $response .= "  💡 {$data['recommendation']}\n";
         }
 
@@ -215,13 +221,13 @@ class RankingCommand extends Command
     private function getPositionEmoji(int $percentile): string
     {
         if ($percentile >= 75) {
-            return "✅ (Top 25%)";
+            return '✅ (Top 25%)';
         } elseif ($percentile >= 50) {
-            return "👍 (Top 50%)";
+            return '👍 (Top 50%)';
         } elseif ($percentile >= 25) {
-            return "⚠️ (Bottom 50%)";
+            return '⚠️ (Bottom 50%)';
         } else {
-            return "❌ (Bottom 25%)";
+            return '❌ (Bottom 25%)';
         }
     }
 
@@ -247,17 +253,17 @@ class RankingCommand extends Command
         $avgPercentile = $count > 0 ? $totalPercentile / $count : 0;
 
         if ($avgPercentile >= 75) {
-            return "🎯 Excelente posición competitiva general. Mantén tu estrategia actual y monitorea cambios del mercado.";
+            return '🎯 Excelente posición competitiva general. Mantén tu estrategia actual y monitorea cambios del mercado.';
         } elseif ($avgPercentile >= 50) {
-            if (!empty($weakFuels)) {
-                return "📊 Posición competitiva media. Enfócate en mejorar: " . implode(', ', $weakFuels) . ".";
+            if (! empty($weakFuels)) {
+                return '📊 Posición competitiva media. Enfócate en mejorar: '.implode(', ', $weakFuels).'.';
             } else {
-                return "📊 Posición competitiva balanceada. Considera ajustes graduales para mejorar tu ranking.";
+                return '📊 Posición competitiva balanceada. Considera ajustes graduales para mejorar tu ranking.';
             }
         } else {
-            return "⚠️ Necesitas mejorar tu competitividad. Revisa precios de " . 
-                   (!empty($weakFuels) ? implode(' y ', $weakFuels) : "todos los combustibles") . 
-                   " para recuperar participación de mercado.";
+            return '⚠️ Necesitas mejorar tu competitividad. Revisa precios de '.
+                   (! empty($weakFuels) ? implode(' y ', $weakFuels) : 'todos los combustibles').
+                   ' para recuperar participación de mercado.';
         }
     }
 }

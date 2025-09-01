@@ -9,9 +9,11 @@ use Telegram\Bot\Commands\Command;
 class PreciosTodasCommand extends Command
 {
     protected string $name = 'precios_todas';
+
     protected string $description = 'Ver precios de todas tus estaciones';
-    
+
     private PricingService $pricingService;
+
     private TableFormatter $formatter;
 
     public function __construct(
@@ -32,8 +34,9 @@ class PreciosTodasCommand extends Command
 
             if ($userStations->isEmpty()) {
                 $this->replyWithMessage([
-                    'text' => "❌ No tienes estaciones registradas.\n\nUsa /registrar para agregar tu primera estación."
+                    'text' => "❌ No tienes estaciones registradas.\n\nUsa /registrar para agregar tu primera estación.",
                 ]);
+
                 return;
             }
 
@@ -42,8 +45,9 @@ class PreciosTodasCommand extends Command
 
             if ($allPrices->isEmpty()) {
                 $this->replyWithMessage([
-                    'text' => "❌ No hay precios disponibles para tus estaciones."
+                    'text' => '❌ No hay precios disponibles para tus estaciones.',
                 ]);
+
                 return;
             }
 
@@ -67,9 +71,9 @@ class PreciosTodasCommand extends Command
             }
 
             // Add best prices summary
-            if (!empty($bestPrices)) {
+            if (! empty($bestPrices)) {
                 $response .= "\n💡 **Mejores Precios:**\n";
-                
+
                 if (isset($bestPrices['regular'])) {
                     $response .= sprintf(
                         "Regular: %s ($%.2f)\n",
@@ -77,7 +81,7 @@ class PreciosTodasCommand extends Command
                         $bestPrices['regular']['price']
                     );
                 }
-                
+
                 if (isset($bestPrices['premium'])) {
                     $response .= sprintf(
                         "Premium: %s ($%.2f)\n",
@@ -85,7 +89,7 @@ class PreciosTodasCommand extends Command
                         $bestPrices['premium']['price']
                     );
                 }
-                
+
                 if (isset($bestPrices['diesel'])) {
                     $response .= sprintf(
                         "Diesel: %s ($%.2f)\n",
@@ -97,17 +101,17 @@ class PreciosTodasCommand extends Command
 
             $this->replyWithMessage([
                 'text' => $response,
-                'parse_mode' => 'Markdown'
+                'parse_mode' => 'Markdown',
             ]);
 
         } catch (\Exception $e) {
             \Log::error('PreciosTodasCommand error', [
                 'chat_id' => $chatId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
-            
+
             $this->replyWithMessage([
-                'text' => "❌ Ocurrió un error al consultar los precios. Por favor intenta más tarde."
+                'text' => '❌ Ocurrió un error al consultar los precios. Por favor intenta más tarde.',
             ]);
         }
     }
@@ -115,11 +119,11 @@ class PreciosTodasCommand extends Command
     private function getUserId(int $chatId): int
     {
         $user = \App\Models\User::where('telegram_chat_id', $chatId)->first();
-        
-        if (!$user) {
+
+        if (! $user) {
             throw new \Exception('Usuario no registrado');
         }
-        
+
         return $user->id;
     }
 
@@ -135,10 +139,10 @@ class PreciosTodasCommand extends Command
                 $fuelType = $priceData->fuel_type;
                 $price = $priceData->price;
 
-                if (!isset($bestPrices[$fuelType]) || $price < $bestPrices[$fuelType]['price']) {
+                if (! isset($bestPrices[$fuelType]) || $price < $bestPrices[$fuelType]['price']) {
                     $bestPrices[$fuelType] = [
                         'alias' => $station->alias,
-                        'price' => $price
+                        'price' => $price,
                     ];
                 }
             }

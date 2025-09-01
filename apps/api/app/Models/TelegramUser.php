@@ -63,6 +63,7 @@ class TelegramUser extends Model
     {
         $token = bin2hex(random_bytes(16));
         $this->update(['registration_token' => $token]);
+
         return $token;
     }
 
@@ -88,13 +89,13 @@ class TelegramUser extends Model
     public function getDisplayName(): string
     {
         if ($this->first_name) {
-            return $this->first_name . ($this->last_name ? ' ' . $this->last_name : '');
+            return $this->first_name.($this->last_name ? ' '.$this->last_name : '');
         }
-        
+
         if ($this->telegram_username) {
-            return '@' . $this->telegram_username;
+            return '@'.$this->telegram_username;
         }
-        
+
         return 'Usuario';
     }
 }

@@ -2,8 +2,8 @@
 
 namespace App\Repositories;
 
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class NlpQueryRepository
 {
@@ -28,7 +28,7 @@ class NlpQueryRepository
             'success' => $data['success'] ?? null,
             'fallback_suggested' => isset($data['fallback_suggested']) ? json_encode($data['fallback_suggested']) : null,
             'created_at' => now(),
-            'updated_at' => now()
+            'updated_at' => now(),
         ]);
     }
 
@@ -42,7 +42,7 @@ class NlpQueryRepository
             ->update([
                 'command_executed' => $commandExecuted,
                 'success' => $success,
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
     }
 
@@ -55,15 +55,15 @@ class NlpQueryRepository
             ->where('created_at', '>=', now()->subHours($hours))
             ->where(function ($query) {
                 $query->where('confidence', '<', 0.7)
-                      ->orWhere('interpreted_intent', 'unknown')
-                      ->orWhereNull('interpreted_intent');
+                    ->orWhere('interpreted_intent', 'unknown')
+                    ->orWhereNull('interpreted_intent');
             })
             ->select([
                 'original_query',
                 'normalized_query',
                 'interpreted_intent',
                 'confidence',
-                DB::raw('COUNT(*) as occurrence_count')
+                DB::raw('COUNT(*) as occurrence_count'),
             ])
             ->groupBy('original_query', 'normalized_query', 'interpreted_intent', 'confidence')
             ->orderBy('occurrence_count', 'desc')
@@ -77,7 +77,7 @@ class NlpQueryRepository
     public function getStatistics(int $hours = 24): array
     {
         $since = now()->subHours($hours);
-        
+
         $stats = DB::table($this->table)
             ->where('created_at', '>=', $since)
             ->selectRaw('
@@ -89,7 +89,7 @@ class NlpQueryRepository
                 COUNT(DISTINCT chat_id) as unique_users
             ')
             ->first();
-        
+
         $intentBreakdown = DB::table($this->table)
             ->where('created_at', '>=', $since)
             ->whereNotNull('interpreted_intent')
@@ -99,19 +99,19 @@ class NlpQueryRepository
             ->get()
             ->pluck('count', 'interpreted_intent')
             ->toArray();
-        
+
         return [
             'total_queries' => $stats->total_queries ?? 0,
             'avg_confidence' => round($stats->avg_confidence ?? 0, 2),
             'avg_response_time_ms' => round($stats->avg_response_time ?? 0),
-            'deepseek_usage_rate' => $stats->total_queries > 0 
-                ? round(($stats->deepseek_count / $stats->total_queries) * 100, 2) 
+            'deepseek_usage_rate' => $stats->total_queries > 0
+                ? round(($stats->deepseek_count / $stats->total_queries) * 100, 2)
                 : 0,
-            'success_rate' => $stats->total_queries > 0 
-                ? round(($stats->successful_queries / $stats->total_queries) * 100, 2) 
+            'success_rate' => $stats->total_queries > 0
+                ? round(($stats->successful_queries / $stats->total_queries) * 100, 2)
                 : 0,
             'unique_users' => $stats->unique_users ?? 0,
-            'intent_breakdown' => $intentBreakdown
+            'intent_breakdown' => $intentBreakdown,
         ];
     }
 
@@ -151,7 +151,7 @@ class NlpQueryRepository
                 'normalized_query',
                 'interpreted_intent',
                 DB::raw('COUNT(*) as query_count'),
-                DB::raw('AVG(confidence) as avg_confidence')
+                DB::raw('AVG(confidence) as avg_confidence'),
             ])
             ->groupBy('normalized_query', 'interpreted_intent')
             ->having('query_count', '>', 1)

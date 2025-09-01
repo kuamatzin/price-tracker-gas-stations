@@ -10,12 +10,12 @@ return [
                 'description' => 'REST API for Mexican fuel price intelligence',
                 'contact' => [
                     'name' => 'FuelIntel Support',
-                    'email' => 'api@fuelintel.mx'
+                    'email' => 'api@fuelintel.mx',
                 ],
                 'license' => [
                     'name' => 'Proprietary',
-                    'url' => 'https://fuelintel.mx/terms'
-                ]
+                    'url' => 'https://fuelintel.mx/terms',
+                ],
             ],
             'routes' => [
                 'api' => 'api/documentation',
@@ -36,8 +36,8 @@ return [
             ],
             'security' => [
                 [
-                    'sanctum' => []
-                ]
+                    'sanctum' => [],
+                ],
             ],
             'securityDefinitions' => [
                 'sanctum' => [

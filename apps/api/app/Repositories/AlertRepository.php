@@ -4,7 +4,6 @@ namespace App\Repositories;
 
 use App\Models\AlertConfiguration;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 class AlertRepository
 {
@@ -68,11 +67,11 @@ class AlertRepository
     public function getAlertsToProcess(int $cooldownMinutes = 60): Collection
     {
         $cutoffTime = now()->subMinutes($cooldownMinutes);
-        
+
         return AlertConfiguration::where('is_active', true)
             ->where(function ($query) use ($cutoffTime) {
                 $query->whereNull('last_triggered_at')
-                      ->orWhere('last_triggered_at', '<=', $cutoffTime);
+                    ->orWhere('last_triggered_at', '<=', $cutoffTime);
             })
             ->with('user')
             ->get();
@@ -102,18 +101,18 @@ class AlertRepository
         $triggered = false;
 
         foreach ($priceChanges as $change) {
-            if (!in_array($change['fuel_type'], $fuelTypes)) {
+            if (! in_array($change['fuel_type'], $fuelTypes)) {
                 continue;
             }
 
             $changePercent = abs($change['change_percentage']);
-            
+
             if ($changePercent >= $threshold) {
                 if ($comparisonType === 'any') {
                     return true; // Any fuel type meeting threshold triggers
                 }
                 $triggered = true;
-            } elseif ($comparisonType === 'all' && !$triggered) {
+            } elseif ($comparisonType === 'all' && ! $triggered) {
                 return false; // All fuel types must meet threshold
             }
         }
@@ -131,11 +130,11 @@ class AlertRepository
         $conditions = $alert->conditions;
         $threshold = $conditions['threshold_percentage'] ?? 2.0;
         $competitorStations = $conditions['competitor_stations'] ?? [];
-        
+
         foreach ($competitorChanges as $change) {
             // If specific competitors are configured, check only those
-            if (!empty($competitorStations) && 
-                !in_array($change['station_numero'], $competitorStations)) {
+            if (! empty($competitorStations) &&
+                ! in_array($change['station_numero'], $competitorStations)) {
                 continue;
             }
 
@@ -157,21 +156,21 @@ class AlertRepository
         $conditions = $alert->conditions;
         $threshold = $conditions['threshold_percentage'] ?? 2.0;
         $fuelTypes = $conditions['fuel_types'] ?? ['regular', 'premium', 'diesel'];
-        
+
         foreach ($fuelTypes as $fuelType) {
-            if (!isset($marketData[$fuelType])) {
+            if (! isset($marketData[$fuelType])) {
                 continue;
             }
 
             $trend = $marketData[$fuelType];
-            
+
             // Check if trend change exceeds threshold
             if (abs($trend['change_percentage']) >= $threshold) {
                 return true;
             }
 
             // Check for volatility (standard deviation)
-            if (isset($trend['std_deviation']) && 
+            if (isset($trend['std_deviation']) &&
                 $trend['std_deviation'] > $threshold) {
                 return true;
             }
@@ -192,7 +191,7 @@ class AlertRepository
             'active' => $alerts->where('is_active', true)->count(),
             'inactive' => $alerts->where('is_active', false)->count(),
             'triggered_today' => $alerts->where('last_triggered_at', '>=', now()->startOfDay())->count(),
-            'types' => $alerts->groupBy('type')->map->count()->toArray()
+            'types' => $alerts->groupBy('type')->map->count()->toArray(),
         ];
     }
 }

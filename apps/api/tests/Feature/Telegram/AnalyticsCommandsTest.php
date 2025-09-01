@@ -2,30 +2,31 @@
 
 namespace Tests\Feature\Telegram;
 
-use Tests\TestCase;
-use App\Models\User;
-use App\Models\Station;
-use App\Models\UserStation;
-use App\Models\PriceChange;
 use App\Models\AlertConfiguration;
+use App\Models\PriceChange;
+use App\Models\Station;
+use App\Models\User;
+use App\Models\UserStation;
 use App\Services\External\DeepSeekService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
-use Telegram\Bot\Laravel\Facades\Telegram;
 use Mockery;
+use Telegram\Bot\Laravel\Facades\Telegram;
+use Tests\TestCase;
 
 class AnalyticsCommandsTest extends TestCase
 {
     use RefreshDatabase;
 
     private User $user;
+
     private Station $station;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->seedTestData();
-        
+
         // Mock Telegram facade
         Telegram::shouldReceive('commandsHandler')->andReturn(true);
     }
@@ -34,7 +35,7 @@ class AnalyticsCommandsTest extends TestCase
     {
         // Create test user
         $this->user = User::factory()->create([
-            'telegram_chat_id' => '123456789'
+            'telegram_chat_id' => '123456789',
         ]);
 
         // Create test station
@@ -45,7 +46,7 @@ class AnalyticsCommandsTest extends TestCase
             'lat' => 19.4326,
             'lng' => -99.1332,
             'municipio_id' => 1,
-            'is_active' => true
+            'is_active' => true,
         ]);
 
         // Create competitor stations
@@ -53,11 +54,11 @@ class AnalyticsCommandsTest extends TestCase
             Station::create([
                 'numero' => "TEST00{$i}",
                 'nombre' => "Competitor {$i}",
-                'brand' => 'Brand ' . $i,
+                'brand' => 'Brand '.$i,
                 'lat' => 19.4326 + ($i * 0.001),
                 'lng' => -99.1332 + ($i * 0.001),
                 'municipio_id' => 1,
-                'is_active' => true
+                'is_active' => true,
             ]);
         }
 
@@ -66,7 +67,7 @@ class AnalyticsCommandsTest extends TestCase
             'user_id' => $this->user->id,
             'station_numero' => $this->station->numero,
             'alias' => 'mi estación',
-            'is_default' => true
+            'is_default' => true,
         ]);
 
         // Create comprehensive price data
@@ -84,7 +85,7 @@ class AnalyticsCommandsTest extends TestCase
             'TEST004' => ['regular' => 21.90, 'premium' => 23.90, 'diesel' => 22.40],
             'TEST005' => ['regular' => 23.00, 'premium' => 25.00, 'diesel' => 23.50],
         ];
-        
+
         foreach ($stations as $stationNumero) {
             foreach ($fuelTypes as $fuel) {
                 // Current price
@@ -93,9 +94,9 @@ class AnalyticsCommandsTest extends TestCase
                     'fuel_type' => $fuel,
                     'price' => $basePrices[$stationNumero][$fuel],
                     'changed_at' => now(),
-                    'detected_at' => now()
+                    'detected_at' => now(),
                 ]);
-                
+
                 // Historical prices for 7 days
                 for ($i = 1; $i <= 7; $i++) {
                     PriceChange::create([
@@ -103,7 +104,7 @@ class AnalyticsCommandsTest extends TestCase
                         'fuel_type' => $fuel,
                         'price' => $basePrices[$stationNumero][$fuel] - ($i * 0.05),
                         'changed_at' => now()->subDays($i),
-                        'detected_at' => now()->subDays($i)
+                        'detected_at' => now()->subDays($i),
                     ]);
                 }
             }
@@ -115,7 +116,7 @@ class AnalyticsCommandsTest extends TestCase
         Telegram::shouldReceive('sendChatAction')
             ->once()
             ->with(['chat_id' => '123456789', 'action' => 'typing']);
-        
+
         Telegram::shouldReceive('sendMessage')
             ->once()
             ->with(Mockery::on(function ($params) {
@@ -127,14 +128,14 @@ class AnalyticsCommandsTest extends TestCase
                        isset($params['parse_mode']) &&
                        $params['parse_mode'] === 'Markdown';
             }))
-            ->andReturn((object)['message_id' => 1]);
+            ->andReturn((object) ['message_id' => 1]);
 
         $response = $this->post('/api/v1/telegram/webhook', [
             'message' => [
                 'text' => '/tendencia',
                 'chat' => ['id' => '123456789'],
-                'from' => ['id' => 123456789]
-            ]
+                'from' => ['id' => 123456789],
+            ],
         ]);
 
         $response->assertOk();
@@ -145,7 +146,7 @@ class AnalyticsCommandsTest extends TestCase
         Telegram::shouldReceive('sendChatAction')
             ->once()
             ->with(['chat_id' => '123456789', 'action' => 'typing']);
-        
+
         Telegram::shouldReceive('sendMessage')
             ->once()
             ->with(Mockery::on(function ($params) {
@@ -153,14 +154,14 @@ class AnalyticsCommandsTest extends TestCase
                        str_contains($params['text'], '#') && // Position indicators
                        str_contains($params['text'], 'Top'); // Percentile info
             }))
-            ->andReturn((object)['message_id' => 1]);
+            ->andReturn((object) ['message_id' => 1]);
 
         $response = $this->post('/api/v1/telegram/webhook', [
             'message' => [
                 'text' => '/ranking',
                 'chat' => ['id' => '123456789'],
-                'from' => ['id' => 123456789]
-            ]
+                'from' => ['id' => 123456789],
+            ],
         ]);
 
         $response->assertOk();
@@ -171,7 +172,7 @@ class AnalyticsCommandsTest extends TestCase
         Telegram::shouldReceive('sendChatAction')
             ->once()
             ->with(['chat_id' => '123456789', 'action' => 'typing']);
-        
+
         Telegram::shouldReceive('sendMessage')
             ->once()
             ->with(Mockery::on(function ($params) {
@@ -179,14 +180,14 @@ class AnalyticsCommandsTest extends TestCase
                        str_contains($params['text'], 'Últimos 14 días') &&
                        str_contains($params['text'], 'Fecha');
             }))
-            ->andReturn((object)['message_id' => 1]);
+            ->andReturn((object) ['message_id' => 1]);
 
         $response = $this->post('/api/v1/telegram/webhook', [
             'message' => [
                 'text' => '/historial 14',
                 'chat' => ['id' => '123456789'],
-                'from' => ['id' => 123456789]
-            ]
+                'from' => ['id' => 123456789],
+            ],
         ]);
 
         $response->assertOk();
@@ -200,23 +201,23 @@ class AnalyticsCommandsTest extends TestCase
                 return str_contains($params['text'], 'Alerta creada exitosamente') &&
                        str_contains($params['text'], 'Cambio de precio');
             }))
-            ->andReturn((object)['message_id' => 1]);
+            ->andReturn((object) ['message_id' => 1]);
 
         $response = $this->post('/api/v1/telegram/webhook', [
             'message' => [
                 'text' => '/alerta_cambios nueva price_change 2 regular',
                 'chat' => ['id' => '123456789'],
-                'from' => ['id' => 123456789]
-            ]
+                'from' => ['id' => 123456789],
+            ],
         ]);
 
         $response->assertOk();
-        
+
         // Verify alert was created in database
         $this->assertDatabaseHas('alert_configurations', [
             'user_id' => $this->user->id,
             'type' => 'price_change',
-            'is_active' => true
+            'is_active' => true,
         ]);
     }
 
@@ -228,7 +229,7 @@ class AnalyticsCommandsTest extends TestCase
             'name' => 'Test Alert 1',
             'type' => 'price_change',
             'conditions' => ['threshold_percentage' => 2.0],
-            'is_active' => true
+            'is_active' => true,
         ]);
 
         AlertConfiguration::create([
@@ -236,7 +237,7 @@ class AnalyticsCommandsTest extends TestCase
             'name' => 'Test Alert 2',
             'type' => 'competitor_move',
             'conditions' => ['threshold_percentage' => 1.5],
-            'is_active' => false
+            'is_active' => false,
         ]);
 
         Telegram::shouldReceive('sendMessage')
@@ -248,14 +249,14 @@ class AnalyticsCommandsTest extends TestCase
                        str_contains($params['text'], '✅') && // Active indicator
                        str_contains($params['text'], '🔴'); // Inactive indicator
             }))
-            ->andReturn((object)['message_id' => 1]);
+            ->andReturn((object) ['message_id' => 1]);
 
         $response = $this->post('/api/v1/telegram/webhook', [
             'message' => [
                 'text' => '/alerta_cambios lista',
                 'chat' => ['id' => '123456789'],
-                'from' => ['id' => 123456789]
-            ]
+                'from' => ['id' => 123456789],
+            ],
         ]);
 
         $response->assertOk();
@@ -271,30 +272,30 @@ class AnalyticsCommandsTest extends TestCase
                 'recommendation' => 'Mantén tus precios actuales. El mercado está estable.',
                 'suggested_actions' => [
                     'Monitorear competidores cercanos',
-                    'Revisar tendencias semanalmente'
+                    'Revisar tendencias semanalmente',
                 ],
                 'risk_level' => 'low',
                 'confidence' => 0.85,
                 'reasoning' => 'Análisis basado en tendencias estables',
-                'ai_generated' => true
+                'ai_generated' => true,
             ]);
-        
+
         $this->app->instance(DeepSeekService::class, $mockDeepSeek);
-        
+
         Telegram::shouldReceive('sendChatAction')
             ->once()
             ->with(['chat_id' => '123456789', 'action' => 'typing']);
-        
+
         Telegram::shouldReceive('sendMessage')
             ->twice() // Once for "analyzing" message, once for recommendation
-            ->andReturn((object)['message_id' => 1]);
+            ->andReturn((object) ['message_id' => 1]);
 
         $response = $this->post('/api/v1/telegram/webhook', [
             'message' => [
                 'text' => '/recomendacion',
                 'chat' => ['id' => '123456789'],
-                'from' => ['id' => 123456789]
-            ]
+                'from' => ['id' => 123456789],
+            ],
         ]);
 
         $response->assertOk();
@@ -303,20 +304,20 @@ class AnalyticsCommandsTest extends TestCase
     public function test_performance_under_3_seconds()
     {
         $startTime = microtime(true);
-        
+
         Telegram::shouldReceive('sendChatAction')->once();
-        Telegram::shouldReceive('sendMessage')->once()->andReturn((object)['message_id' => 1]);
+        Telegram::shouldReceive('sendMessage')->once()->andReturn((object) ['message_id' => 1]);
 
         $response = $this->post('/api/v1/telegram/webhook', [
             'message' => [
                 'text' => '/tendencia',
                 'chat' => ['id' => '123456789'],
-                'from' => ['id' => 123456789]
-            ]
+                'from' => ['id' => 123456789],
+            ],
         ]);
 
         $executionTime = microtime(true) - $startTime;
-        
+
         $response->assertOk();
         $this->assertLessThan(3, $executionTime, 'Command execution exceeded 3 seconds');
     }
@@ -325,32 +326,32 @@ class AnalyticsCommandsTest extends TestCase
     {
         // First request - should populate cache
         Telegram::shouldReceive('sendChatAction')->twice();
-        Telegram::shouldReceive('sendMessage')->twice()->andReturn((object)['message_id' => 1]);
+        Telegram::shouldReceive('sendMessage')->twice()->andReturn((object) ['message_id' => 1]);
 
         $response1 = $this->post('/api/v1/telegram/webhook', [
             'message' => [
                 'text' => '/ranking',
                 'chat' => ['id' => '123456789'],
-                'from' => ['id' => 123456789]
-            ]
+                'from' => ['id' => 123456789],
+            ],
         ]);
 
         // Second request - should use cache
         $startTime = microtime(true);
-        
+
         $response2 = $this->post('/api/v1/telegram/webhook', [
             'message' => [
                 'text' => '/ranking',
                 'chat' => ['id' => '123456789'],
-                'from' => ['id' => 123456789]
-            ]
+                'from' => ['id' => 123456789],
+            ],
         ]);
 
         $cachedExecutionTime = microtime(true) - $startTime;
-        
+
         $response1->assertOk();
         $response2->assertOk();
-        
+
         // Cached request should be faster
         $this->assertLessThan(1, $cachedExecutionTime, 'Cached request took too long');
     }
@@ -362,14 +363,14 @@ class AnalyticsCommandsTest extends TestCase
             ->with(Mockery::on(function ($params) {
                 return str_contains($params['text'], '❌'); // Error indicator
             }))
-            ->andReturn((object)['message_id' => 1]);
+            ->andReturn((object) ['message_id' => 1]);
 
         $response = $this->post('/api/v1/telegram/webhook', [
             'message' => [
                 'text' => '/historial 999', // Invalid days parameter (max 30)
                 'chat' => ['id' => '123456789'],
-                'from' => ['id' => 123456789]
-            ]
+                'from' => ['id' => 123456789],
+            ],
         ]);
 
         $response->assertOk();
@@ -382,14 +383,14 @@ class AnalyticsCommandsTest extends TestCase
             ->with(Mockery::on(function ($params) {
                 return str_contains($params['text'], 'Usuario no registrado');
             }))
-            ->andReturn((object)['message_id' => 1]);
+            ->andReturn((object) ['message_id' => 1]);
 
         $response = $this->post('/api/v1/telegram/webhook', [
             'message' => [
                 'text' => '/tendencia',
                 'chat' => ['id' => '999999999'], // Non-existent user
-                'from' => ['id' => 999999999]
-            ]
+                'from' => ['id' => 999999999],
+            ],
         ]);
 
         $response->assertOk();

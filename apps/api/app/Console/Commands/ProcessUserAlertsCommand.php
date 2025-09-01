@@ -60,11 +60,11 @@ class ProcessUserAlertsCommand extends Command
             return Command::SUCCESS;
 
         } catch (\Exception $e) {
-            $this->error('Alert processing failed: ' . $e->getMessage());
-            
+            $this->error('Alert processing failed: '.$e->getMessage());
+
             Log::error('ProcessUserAlertsCommand failed', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return Command::FAILURE;
@@ -82,6 +82,7 @@ class ProcessUserAlertsCommand extends Command
 
         if ($alerts->isEmpty()) {
             $this->warn("No active alerts found for user {$userId}");
+
             return;
         }
 
@@ -110,6 +111,7 @@ class ProcessUserAlertsCommand extends Command
 
         if ($alerts->isEmpty()) {
             $this->info('No alerts ready for processing');
+
             return;
         }
 
@@ -121,7 +123,7 @@ class ProcessUserAlertsCommand extends Command
         foreach ($alertsByUser as $userId => $userAlerts) {
             $this->line("User {$userId}: {$userAlerts->count()} alerts");
 
-            if (!$dryRun) {
+            if (! $dryRun) {
                 ProcessAlertsJob::dispatch($userId);
                 $jobCount++;
             }
@@ -145,7 +147,7 @@ class ProcessUserAlertsCommand extends Command
         $stats = [
             'total' => $alerts->count(),
             'by_type' => $alerts->groupBy('type')->map->count(),
-            'users' => $alerts->pluck('user_id')->unique()->count()
+            'users' => $alerts->pluck('user_id')->unique()->count(),
         ];
 
         $this->info('Alert Statistics:');

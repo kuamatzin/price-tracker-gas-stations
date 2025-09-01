@@ -16,7 +16,7 @@ class VerifyWebhookSignature
     {
         $signature = $request->header('X-Webhook-Signature');
 
-        if (!$signature) {
+        if (! $signature) {
             Log::warning('Webhook request missing signature', [
                 'type' => $webhookType,
                 'ip' => $request->ip(),
@@ -25,21 +25,21 @@ class VerifyWebhookSignature
         }
 
         $secret = $this->getWebhookSecret($webhookType);
-        
-        if (!$secret) {
+
+        if (! $secret) {
             Log::error('Webhook secret not configured', ['type' => $webhookType]);
             throw new \RuntimeException('Webhook secret not configured');
         }
 
         $payload = $request->getContent();
-        $expectedSignature = 'sha256=' . hash_hmac('sha256', $payload, $secret);
+        $expectedSignature = 'sha256='.hash_hmac('sha256', $payload, $secret);
 
         // Use hash_equals to prevent timing attacks
-        if (!hash_equals($expectedSignature, $signature)) {
+        if (! hash_equals($expectedSignature, $signature)) {
             Log::warning('Invalid webhook signature', [
                 'type' => $webhookType,
                 'ip' => $request->ip(),
-                'provided' => substr($signature, 0, 20) . '...',
+                'provided' => substr($signature, 0, 20).'...',
             ]);
             throw new UnauthorizedHttpException('', 'Invalid webhook signature');
         }

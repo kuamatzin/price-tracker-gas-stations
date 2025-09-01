@@ -10,9 +10,6 @@ class ApiVersion
     /**
      * Handle an incoming request.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure  $next
-     * @param  string  $version
      * @return mixed
      */
     public function handle(Request $request, Closure $next, string $version = 'v1')
@@ -23,7 +20,7 @@ class ApiVersion
         // Add deprecation warning for v1
         if ($version === 'v1') {
             $response = $next($request);
-            
+
             // Add sunset headers for v1 deprecation
             $response->headers->set(
                 'Sunset',
@@ -37,7 +34,7 @@ class ApiVersion
                 'Link',
                 '<https://api.fuelintel.mx/v2>; rel="successor-version"'
             );
-            
+
             return $response;
         }
 

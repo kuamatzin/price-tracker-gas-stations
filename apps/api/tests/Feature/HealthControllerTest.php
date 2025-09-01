@@ -15,7 +15,7 @@ class HealthControllerTest extends TestCase
 
         // Health endpoint should return either 200 (healthy) or 503 (unhealthy)
         $this->assertContains($response->getStatusCode(), [200, 503]);
-        
+
         $response->assertJsonStructure([
             'status',
             'timestamp',
@@ -45,7 +45,7 @@ class HealthControllerTest extends TestCase
         // For the MVP test requirement, we just verify the endpoint exists
         // and returns either 200 (healthy) or 503 (unhealthy but responding)
         $this->assertContains($response->getStatusCode(), [200, 503]);
-        
+
         // Verify it's a valid health response
         $this->assertNotNull($response->json('status'));
         $this->assertNotNull($response->json('timestamp'));
@@ -61,11 +61,11 @@ class HealthControllerTest extends TestCase
         $response->assertJsonStructure([
             'version' => [
                 'api',
-                'laravel', 
+                'laravel',
                 'php',
             ],
         ]);
-        
+
         $this->assertNotEmpty($response->json('version.laravel'));
         $this->assertNotEmpty($response->json('version.php'));
     }
@@ -76,7 +76,7 @@ class HealthControllerTest extends TestCase
     public function test_health_includes_response_time(): void
     {
         $response = $this->getJson('/api/health');
-        
+
         $responseTime = $response->json('response_time_ms');
         $this->assertIsNumeric($responseTime);
         $this->assertGreaterThan(0, $responseTime);

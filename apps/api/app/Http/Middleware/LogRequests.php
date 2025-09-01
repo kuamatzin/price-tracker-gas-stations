@@ -13,9 +13,9 @@ class LogRequests
     {
         $requestId = $request->header('X-Request-ID') ?? uniqid('req_');
         $request->headers->set('X-Request-ID', $requestId);
-        
+
         $startTime = microtime(true);
-        
+
         Log::channel('api')->info('API Request', [
             'request_id' => $requestId,
             'method' => $request->method(),
@@ -23,20 +23,20 @@ class LogRequests
             'ip' => $request->ip(),
             'user_agent' => $request->userAgent(),
         ]);
-        
+
         $response = $next($request);
-        
+
         $duration = round((microtime(true) - $startTime) * 1000, 2);
-        
+
         Log::channel('api')->info('API Response', [
             'request_id' => $requestId,
             'status' => $response->getStatusCode(),
             'duration_ms' => $duration,
         ]);
-        
+
         $response->headers->set('X-Request-ID', $requestId);
-        $response->headers->set('X-Response-Time', $duration . 'ms');
-        
+        $response->headers->set('X-Response-Time', $duration.'ms');
+
         return $response;
     }
 }

@@ -20,7 +20,7 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamp('last_triggered_at')->nullable();
             $table->timestamps();
-            
+
             $table->index(['user_id', 'is_active']);
             $table->index('type');
         });

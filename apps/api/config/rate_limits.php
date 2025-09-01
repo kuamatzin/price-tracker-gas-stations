@@ -7,14 +7,14 @@ return [
         'premium' => 1000,  // 1000 requests per hour
         'enterprise' => 10000, // 10000 requests per hour
     ],
-    
+
     'burst_limits' => [
         'free' => 10,       // 10 requests burst
         'basic' => 50,      // 50 requests burst
         'premium' => 100,   // 100 requests burst
         'enterprise' => 500, // 500 requests burst
     ],
-    
+
     'endpoints' => [
         // Specific rate limits for expensive endpoints
         'analysis/*' => [

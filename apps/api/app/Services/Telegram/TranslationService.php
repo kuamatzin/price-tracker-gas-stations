@@ -2,8 +2,8 @@
 
 namespace App\Services\Telegram;
 
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\File;
 
 class TranslationService
 {
@@ -38,18 +38,19 @@ class TranslationService
         $cached = Cache::get($cacheKey);
         if ($cached) {
             $this->translations[$language] = $cached;
+
             return $cached;
         }
 
         // Load from file
         $path = resource_path("lang/telegram/{$language}.json");
-        
-        if (!File::exists($path)) {
+
+        if (! File::exists($path)) {
             // If language file doesn't exist, use default
             if ($language !== $this->defaultLanguage) {
                 return $this->loadTranslations($this->defaultLanguage);
             }
-            
+
             // Return empty array if default also doesn't exist
             return [];
         }
@@ -59,35 +60,36 @@ class TranslationService
 
         // Cache for 24 hours
         Cache::put($cacheKey, $translations, 86400);
-        
+
         $this->translations[$language] = $translations;
+
         return $translations;
     }
 
     /**
      * Get a translation
      */
-    public function get(string $key, array $params = [], string $language = null): string
+    public function get(string $key, array $params = [], ?string $language = null): string
     {
         $language = $language ?? $this->defaultLanguage;
-        
-        if (!in_array($language, $this->availableLanguages)) {
+
+        if (! in_array($language, $this->availableLanguages)) {
             $language = $this->defaultLanguage;
         }
 
         $translations = $this->loadTranslations($language);
-        
+
         // Navigate through nested keys (e.g., "welcome.new_user")
         $keys = explode('.', $key);
         $value = $translations;
-        
+
         foreach ($keys as $k) {
-            if (!isset($value[$k])) {
+            if (! isset($value[$k])) {
                 // If key not found, try default language
                 if ($language !== $this->defaultLanguage) {
                     return $this->get($key, $params, $this->defaultLanguage);
                 }
-                
+
                 // Return the key itself if not found
                 return $key;
             }
@@ -95,7 +97,7 @@ class TranslationService
         }
 
         // Replace parameters
-        if (!empty($params)) {
+        if (! empty($params)) {
             foreach ($params as $param => $val) {
                 $value = str_replace(":{$param}", $val, $value);
             }
@@ -107,21 +109,21 @@ class TranslationService
     /**
      * Check if a translation exists
      */
-    public function has(string $key, string $language = null): bool
+    public function has(string $key, ?string $language = null): bool
     {
         $language = $language ?? $this->defaultLanguage;
-        
-        if (!in_array($language, $this->availableLanguages)) {
+
+        if (! in_array($language, $this->availableLanguages)) {
             return false;
         }
 
         $translations = $this->loadTranslations($language);
-        
+
         $keys = explode('.', $key);
         $value = $translations;
-        
+
         foreach ($keys as $k) {
-            if (!isset($value[$k])) {
+            if (! isset($value[$k])) {
                 return false;
             }
             $value = $value[$k];
@@ -145,7 +147,7 @@ class TranslationService
     {
         $names = [
             'es' => 'Español',
-            'en' => 'English'
+            'en' => 'English',
         ];
 
         return $names[$code] ?? $code;
@@ -159,7 +161,7 @@ class TranslationService
         foreach ($this->availableLanguages as $language) {
             Cache::forget("telegram:translations:{$language}");
         }
-        
+
         $this->translations = [];
     }
 
@@ -169,7 +171,7 @@ class TranslationService
     public function reload(): void
     {
         $this->clearCache();
-        
+
         foreach ($this->availableLanguages as $language) {
             $this->loadTranslations($language);
         }

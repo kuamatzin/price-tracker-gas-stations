@@ -14,10 +14,10 @@ class RefreshController extends Controller
     public function refresh(Request $request): JsonResponse
     {
         $user = $request->user();
-        
+
         // Get current token abilities before deletion
         $abilities = $request->user()->currentAccessToken()->abilities ?? ['*'];
-        
+
         // Delete current token
         $request->user()->currentAccessToken()->delete();
 

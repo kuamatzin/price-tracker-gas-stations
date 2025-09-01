@@ -4,7 +4,6 @@ namespace App\Jobs;
 
 use App\Repositories\AlertRepository;
 use App\Repositories\AnalyticsRepository;
-use App\Services\Telegram\TelegramSession;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -18,9 +17,11 @@ class ProcessAlertsJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $tries = 3;
+
     public $backoff = [60, 180, 300]; // Exponential backoff
-    
+
     private int $userId;
+
     private ?int $alertId;
 
     /**
@@ -53,26 +54,27 @@ class ProcessAlertsJob implements ShouldQueue
             }
 
             $user = \App\Models\User::find($this->userId);
-            if (!$user || !$user->telegram_chat_id) {
+            if (! $user || ! $user->telegram_chat_id) {
                 Log::warning('ProcessAlertsJob: User not found or no Telegram ID', [
-                    'user_id' => $this->userId
+                    'user_id' => $this->userId,
                 ]);
+
                 return;
             }
 
             // Get user's stations
             $userStations = $user->stations()->pluck('station_numero')->toArray();
-            
+
             if (empty($userStations)) {
                 return;
             }
 
             // Get recent price changes
             $priceChanges = $analyticsRepository->getRecentPriceChanges($userStations, 1);
-            
+
             // Get market statistics for trend alerts
             $municipioId = $user->stations()->first()->municipio_id ?? null;
-            $marketStats = $municipioId 
+            $marketStats = $municipioId
                 ? $analyticsRepository->getMarketStatistics($municipioId, null, 1)
                 : [];
 
@@ -88,7 +90,7 @@ class ProcessAlertsJob implements ShouldQueue
                 switch ($alert->type) {
                     case 'price_change':
                         $relevantChanges = $this->filterPriceChanges($priceChanges, $alert);
-                        if (!$relevantChanges->isEmpty() && 
+                        if (! $relevantChanges->isEmpty() &&
                             $alertRepository->evaluatePriceChangeAlert($alert, $relevantChanges->toArray())) {
                             $shouldTrigger = true;
                             $notificationData = $this->preparePriceChangeNotification($alert, $relevantChanges);
@@ -98,10 +100,10 @@ class ProcessAlertsJob implements ShouldQueue
                     case 'competitor_move':
                         // Get competitor changes
                         $competitorStations = $this->getCompetitorStations($user, $alert);
-                        if (!empty($competitorStations)) {
+                        if (! empty($competitorStations)) {
                             $competitorChanges = $analyticsRepository->getRecentPriceChanges($competitorStations, 1);
-                            
-                            if (!$competitorChanges->isEmpty() &&
+
+                            if (! $competitorChanges->isEmpty() &&
                                 $alertRepository->evaluateCompetitorMoveAlert($alert, $competitorChanges->toArray())) {
                                 $shouldTrigger = true;
                                 $notificationData = $this->prepareCompetitorNotification($alert, $competitorChanges);
@@ -128,9 +130,9 @@ class ProcessAlertsJob implements ShouldQueue
                 'user_id' => $this->userId,
                 'alert_id' => $this->alertId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            
+
             throw $e; // Re-throw for retry mechanism
         }
     }
@@ -145,7 +147,7 @@ class ProcessAlertsJob implements ShouldQueue
         $threshold = $conditions['threshold_percentage'] ?? 2.0;
 
         return $priceChanges->filter(function ($change) use ($fuelTypes, $threshold) {
-            return in_array($change->fuel_type, $fuelTypes) 
+            return in_array($change->fuel_type, $fuelTypes)
                    && abs($change->change_percentage) >= $threshold;
         });
     }
@@ -157,9 +159,9 @@ class ProcessAlertsJob implements ShouldQueue
     {
         $conditions = $alert->conditions;
         $radiusKm = $conditions['radius_km'] ?? 5;
-        
+
         $userStation = $user->stations()->first();
-        if (!$userStation) {
+        if (! $userStation) {
             return [];
         }
 
@@ -167,10 +169,10 @@ class ProcessAlertsJob implements ShouldQueue
         $competitors = \App\Models\Station::select('numero')
             ->where('is_active', true)
             ->where('numero', '!=', $userStation->station_numero)
-            ->whereRaw("(6371 * acos(cos(radians(?)) * cos(radians(lat)) * 
+            ->whereRaw('(6371 * acos(cos(radians(?)) * cos(radians(lat)) * 
                        cos(radians(lng) - radians(?)) + sin(radians(?)) * 
-                       sin(radians(lat)))) <= ?", 
-                       [$userStation->lat, $userStation->lng, $userStation->lat, $radiusKm])
+                       sin(radians(lat)))) <= ?',
+                [$userStation->lat, $userStation->lng, $userStation->lat, $radiusKm])
             ->pluck('numero')
             ->toArray();
 
@@ -184,7 +186,7 @@ class ProcessAlertsJob implements ShouldQueue
     {
         $data = [
             'alert_name' => $alert->name,
-            'changes' => []
+            'changes' => [],
         ];
 
         foreach ($changes as $change) {
@@ -194,7 +196,7 @@ class ProcessAlertsJob implements ShouldQueue
                 'new_price' => number_format($change->new_price, 2),
                 'change_amount' => number_format($change->change_amount, 2),
                 'change_percentage' => number_format($change->change_percentage, 1),
-                'direction' => $change->change_amount > 0 ? 'subió' : 'bajó'
+                'direction' => $change->change_amount > 0 ? 'subió' : 'bajó',
             ];
         }
 
@@ -208,18 +210,18 @@ class ProcessAlertsJob implements ShouldQueue
     {
         $data = [
             'alert_name' => $alert->name,
-            'competitor_changes' => []
+            'competitor_changes' => [],
         ];
 
         foreach ($changes->take(5) as $change) { // Limit to 5 competitors
             $station = \App\Models\Station::where('numero', $change->station_numero)->first();
-            
+
             $data['competitor_changes'][] = [
                 'station_name' => $station->nombre ?? 'Competidor',
                 'brand' => $station->brand ?? 'Desconocido',
                 'fuel_type' => ucfirst($change->fuel_type),
                 'change_percentage' => number_format($change->change_percentage, 1),
-                'new_price' => number_format($change->new_price, 2)
+                'new_price' => number_format($change->new_price, 2),
             ];
         }
 
@@ -233,7 +235,7 @@ class ProcessAlertsJob implements ShouldQueue
     {
         $data = [
             'alert_name' => $alert->name,
-            'trends' => []
+            'trends' => [],
         ];
 
         foreach ($marketStats as $fuelType => $stats) {
@@ -243,7 +245,7 @@ class ProcessAlertsJob implements ShouldQueue
                     'average' => number_format($stats['average'], 2),
                     'volatility' => number_format($stats['volatility'], 1),
                     'min' => number_format($stats['minimum'], 2),
-                    'max' => number_format($stats['maximum'], 2)
+                    'max' => number_format($stats['maximum'], 2),
                 ];
             }
         }
@@ -262,19 +264,19 @@ class ProcessAlertsJob implements ShouldQueue
             Telegram::sendMessage([
                 'chat_id' => $user->telegram_chat_id,
                 'text' => $message,
-                'parse_mode' => 'Markdown'
+                'parse_mode' => 'Markdown',
             ]);
 
             Log::info('Alert notification sent', [
                 'user_id' => $user->id,
                 'alert_id' => $alert->id,
-                'alert_type' => $alert->type
+                'alert_type' => $alert->type,
             ]);
         } catch (\Exception $e) {
             Log::error('Failed to send alert notification', [
                 'user_id' => $user->id,
                 'alert_id' => $alert->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
         }
     }
@@ -331,7 +333,7 @@ class ProcessAlertsJob implements ShouldQueue
         Log::error('ProcessAlertsJob permanently failed', [
             'user_id' => $this->userId,
             'alert_id' => $this->alertId,
-            'error' => $exception->getMessage()
+            'error' => $exception->getMessage(),
         ]);
     }
 }

@@ -24,7 +24,7 @@ return new class extends Migration
             $table->timestamp('registered_at')->useCurrent();
             $table->timestamp('last_interaction')->nullable();
             $table->timestamps();
-            
+
             $table->index('telegram_id');
             $table->index('user_id');
             $table->index('registration_token');

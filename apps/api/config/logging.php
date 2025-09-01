@@ -126,7 +126,7 @@ return [
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
         ],
-        
+
         'scraper' => [
             'driver' => 'daily',
             'path' => storage_path('logs/scraper.log'),
@@ -134,7 +134,7 @@ return [
             'days' => 30,
             'replace_placeholders' => true,
         ],
-        
+
         'api' => [
             'driver' => 'daily',
             'path' => storage_path('logs/api.log'),
@@ -142,7 +142,7 @@ return [
             'days' => 14,
             'replace_placeholders' => true,
         ],
-        
+
         'error' => [
             'driver' => 'daily',
             'path' => storage_path('logs/error.log'),
@@ -150,7 +150,7 @@ return [
             'days' => 30,
             'replace_placeholders' => true,
         ],
-        
+
         'sentry' => [
             'driver' => 'sentry',
             'level' => env('SENTRY_LOG_LEVEL', 'error'),

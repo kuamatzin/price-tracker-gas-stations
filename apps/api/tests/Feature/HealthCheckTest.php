@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class HealthCheckTest extends TestCase
@@ -26,7 +25,7 @@ class HealthCheckTest extends TestCase
 
         // Health endpoint should return either 200 (healthy) or 503 (unhealthy)
         $this->assertContains($response->getStatusCode(), [200, 503]);
-        
+
         $response->assertJsonStructure([
             'status',
             'timestamp',
@@ -44,7 +43,7 @@ class HealthCheckTest extends TestCase
             ],
             'response_time_ms',
         ]);
-        
+
         // Status can be healthy, degraded, or unhealthy depending on services
         $this->assertContains($response->json('status'), ['healthy', 'degraded', 'unhealthy']);
     }

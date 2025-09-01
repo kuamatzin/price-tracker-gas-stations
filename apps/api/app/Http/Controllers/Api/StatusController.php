@@ -18,10 +18,13 @@ class StatusController extends Controller
      *     summary="Get API status dashboard",
      *     description="Returns comprehensive API health and performance metrics",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Successful operation",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="service", type="string", example="FuelIntel API"),
      *             @OA\Property(property="version", type="string", example="1.0.0"),
      *             @OA\Property(property="status", type="string", example="operational"),
@@ -40,7 +43,7 @@ class StatusController extends Controller
             '/api/v1/trends/market',
             '/api/v1/competitors',
             '/api/v1/geo/estados',
-            '/api/v1/analysis/insights'
+            '/api/v1/analysis/insights',
         ];
 
         $status = [];
@@ -52,14 +55,14 @@ class StatusController extends Controller
                 'error_rate' => 0,
                 'requests_per_minute' => 0,
                 'last_error' => null,
-                'status' => 'operational'
+                'status' => 'operational',
             ]);
 
             $status[] = [
                 'endpoint' => $endpoint,
                 'status' => $this->determineStatus($metrics),
                 'metrics' => $metrics,
-                'uptime' => $this->calculateUptime($endpoint)
+                'uptime' => $this->calculateUptime($endpoint),
             ];
         }
 
@@ -76,7 +79,7 @@ class StatusController extends Controller
                 'cpu_usage' => $this->getCpuUsage(),
                 'queue_size' => $this->getQueueSize(),
             ],
-            'timestamp' => now()->toIso8601String()
+            'timestamp' => now()->toIso8601String(),
         ]);
     }
 
@@ -87,18 +90,24 @@ class StatusController extends Controller
      *     tags={"Status"},
      *     summary="Simple health check",
      *     description="Returns basic health status",
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Service is healthy",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="status", type="string", example="healthy"),
      *             @OA\Property(property="timestamp", type="string", format="date-time")
      *         )
      *     ),
+     *
      *     @OA\Response(
      *         response=503,
      *         description="Service is unhealthy",
+     *
      *         @OA\JsonContent(
+     *
      *             @OA\Property(property="status", type="string", example="unhealthy"),
      *             @OA\Property(property="errors", type="array", @OA\Items(type="string"))
      *         )
@@ -136,14 +145,14 @@ class StatusController extends Controller
         if ($isHealthy) {
             return response()->json([
                 'status' => 'healthy',
-                'timestamp' => now()->toIso8601String()
+                'timestamp' => now()->toIso8601String(),
             ]);
         }
 
         return response()->json([
             'status' => 'unhealthy',
             'errors' => $errors,
-            'timestamp' => now()->toIso8601String()
+            'timestamp' => now()->toIso8601String(),
         ], 503);
     }
 
@@ -155,9 +164,11 @@ class StatusController extends Controller
      *     summary="Get detailed metrics",
      *     description="Returns detailed performance and usage metrics",
      *     security={{"sanctum":{}}},
+     *
      *     @OA\Response(
      *         response=200,
      *         description="Successful operation",
+     *
      *         @OA\JsonContent(type="object")
      *     )
      * )
@@ -191,7 +202,7 @@ class StatusController extends Controller
                     'peak_mb' => round(memory_get_peak_usage(true) / 1024 / 1024, 2),
                 ],
             ],
-            'timestamp' => now()->toIso8601String()
+            'timestamp' => now()->toIso8601String(),
         ];
 
         return response()->json($metrics);
@@ -233,7 +244,7 @@ class StatusController extends Controller
     {
         $downtimeMinutes = Cache::get("downtime:$endpoint:today", 0);
         $totalMinutes = now()->diffInMinutes(now()->startOfDay());
-        
+
         if ($totalMinutes == 0) {
             return 100.0;
         }
@@ -279,7 +290,7 @@ class StatusController extends Controller
     {
         $total = disk_total_space('/');
         $free = disk_free_space('/');
-        
+
         if ($total == 0) {
             return 0;
         }
@@ -291,7 +302,7 @@ class StatusController extends Controller
     {
         $total = disk_total_space('/');
         $free = disk_free_space('/');
-        
+
         if ($total == 0) {
             return 0;
         }
@@ -302,8 +313,8 @@ class StatusController extends Controller
     private function getMemoryUsage(): float
     {
         $memInfo = file_get_contents('/proc/meminfo');
-        
-        if (!$memInfo) {
+
+        if (! $memInfo) {
             // Fallback for non-Linux systems
             return round(memory_get_usage(true) / memory_get_peak_usage(true) * 100, 2);
         }
@@ -314,11 +325,11 @@ class StatusController extends Controller
         if (isset($totalMatch[1]) && isset($availableMatch[1])) {
             $total = (int) $totalMatch[1];
             $available = (int) $availableMatch[1];
-            
+
             if ($total == 0) {
                 return 0;
             }
-            
+
             return round(($total - $available) / $total * 100, 2);
         }
 
@@ -329,7 +340,7 @@ class StatusController extends Controller
     {
         $load = sys_getloadavg();
         $cpuCount = 1;
-        
+
         if (is_readable('/proc/cpuinfo')) {
             $cpuInfo = file_get_contents('/proc/cpuinfo');
             preg_match_all('/processor\s+:/', $cpuInfo, $matches);
@@ -353,6 +364,7 @@ class StatusController extends Controller
     {
         try {
             $result = DB::select("SELECT COUNT(*) as count FROM pg_stat_activity WHERE state = 'active'");
+
             return $result[0]->count ?? 0;
         } catch (\Exception $e) {
             return 0;
@@ -364,6 +376,7 @@ class StatusController extends Controller
         if (is_readable('/proc/uptime')) {
             $uptime = file_get_contents('/proc/uptime');
             $seconds = (int) explode(' ', $uptime)[0];
+
             return $seconds;
         }
 
