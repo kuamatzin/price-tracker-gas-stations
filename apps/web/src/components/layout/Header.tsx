@@ -118,7 +118,7 @@ export const Header = () => {
             <NotificationBell count={unreadCount} />
 
             {/* User menu */}
-            <UserMenu user={user} />
+            <UserMenu />
           </div>
         </div>
       </div>
