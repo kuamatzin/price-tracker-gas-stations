@@ -1,17 +1,21 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useAlertStore } from '@/stores/alertStore';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useAlertStore } from "@/stores/alertStore";
 
 const BellIcon = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-  </svg>
-);
-
-const CheckIcon = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+  <svg
+    className={className}
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={1.5}
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"
+    />
   </svg>
 );
 
@@ -35,11 +39,11 @@ export const NotificationBell = ({ count }: NotificationBellProps) => {
       >
         <BellIcon className="h-5 w-5" />
         {count > 0 && (
-          <Badge 
+          <Badge
             variant="destructive"
             className="absolute -top-1 -right-1 h-5 w-5 p-0 text-xs flex items-center justify-center"
           >
-            {count > 9 ? '9+' : count}
+            {count > 9 ? "9+" : count}
           </Badge>
         )}
       </Button>
@@ -88,7 +92,7 @@ export const NotificationBell = ({ count }: NotificationBellProps) => {
                       <div
                         key={alert.id}
                         className={`px-4 py-3 border-b border-gray-50 dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${
-                          !alert.read ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                          !alert.read ? "bg-blue-50 dark:bg-blue-900/20" : ""
                         }`}
                         onClick={() => {
                           if (!alert.read) {
@@ -97,13 +101,20 @@ export const NotificationBell = ({ count }: NotificationBellProps) => {
                         }}
                       >
                         <div className="flex items-start space-x-3">
-                          <div className={`
+                          <div
+                            className={`
                             flex-shrink-0 w-2 h-2 rounded-full mt-2
-                            ${alert.severity === 'critical' ? 'bg-red-500' :
-                              alert.severity === 'high' ? 'bg-orange-500' :
-                              alert.severity === 'medium' ? 'bg-yellow-500' :
-                              'bg-blue-500'}
-                          `} />
+                            ${
+                              alert.severity === "critical"
+                                ? "bg-red-500"
+                                : alert.severity === "high"
+                                  ? "bg-orange-500"
+                                  : alert.severity === "medium"
+                                    ? "bg-yellow-500"
+                                    : "bg-blue-500"
+                            }
+                          `}
+                          />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-900 dark:text-white">
                               {alert.title}
