@@ -1,7 +1,9 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
+import { Button } from '@/components/ui/button';
 
 interface NavItem {
   name: string;
@@ -36,17 +38,38 @@ const SettingsIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const AlertsIcon = ({ className }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+  </svg>
+);
+
+const ChevronLeftIcon = ({ className }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+  </svg>
+);
+
+const ChevronDownIcon = ({ className }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+  </svg>
+);
+
 const navigation: NavItem[] = [
-  { name: 'Dashboard', href: '/dashboard', icon: DashboardIcon },
-  { name: 'Prices', href: '/prices', icon: PricesIcon },
-  { name: 'Analytics', href: '/analytics', icon: AnalyticsIcon },
-  { name: 'Settings', href: '/settings', icon: SettingsIcon },
+  { name: 'Inicio', href: '/dashboard', icon: DashboardIcon },
+  { name: 'Precios', href: '/prices', icon: PricesIcon },
+  { name: 'Análisis', href: '/analytics', icon: AnalyticsIcon },
+  { name: 'Alertas', href: '/alerts', icon: AlertsIcon },
+  { name: 'Configuración', href: '/settings', icon: SettingsIcon },
 ];
 
 export const Sidebar = () => {
   const location = useLocation();
   const { user } = useAuthStore();
-  const { setSidebarOpen } = useUIStore();
+  const { sidebarOpen, setSidebarOpen } = useUIStore();
+  const [collapsed, setCollapsed] = useState(false);
+  const [stationSelectorOpen, setStationSelectorOpen] = useState(false);
 
   const handleNavClick = () => {
     // Close sidebar on mobile when navigation item is clicked
@@ -55,44 +78,131 @@ export const Sidebar = () => {
     }
   };
 
+  const toggleCollapse = () => {
+    setCollapsed(!collapsed);
+  };
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.altKey && event.key >= '1' && event.key <= '5') {
+        event.preventDefault();
+        const index = parseInt(event.key) - 1;
+        if (navigation[index]) {
+          window.location.href = navigation[index].href;
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeydown);
+    return () => document.removeEventListener('keydown', handleKeydown);
+  }, []);
+
   return (
-    <div className="flex h-screen w-64 flex-col bg-white dark:bg-gray-800 shadow-sm border-r border-gray-200 dark:border-gray-700">
-      {/* Logo */}
-      <div className="flex h-16 shrink-0 items-center px-6 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center space-x-3">
+    <div className={cn(
+      "flex h-screen flex-col bg-white dark:bg-gray-800 shadow-sm border-r border-gray-200 dark:border-gray-700 transition-all duration-300",
+      collapsed ? "w-16" : "w-64"
+    )}>
+      {/* Logo and Collapse Toggle */}
+      <div className="flex h-16 shrink-0 items-center justify-between px-6 border-b border-gray-200 dark:border-gray-700">
+        <div className={cn("flex items-center space-x-3", collapsed && "justify-center w-full")}>
           <div className="h-8 w-8 rounded-lg bg-brand-600 flex items-center justify-center">
             <span className="text-white font-bold text-lg">F</span>
           </div>
-          <span className="text-xl font-bold text-gray-900 dark:text-white">
-            FuelIntel
-          </span>
+          {!collapsed && (
+            <span className="text-xl font-bold text-gray-900 dark:text-white">
+              FuelIntel
+            </span>
+          )}
         </div>
+        {!collapsed && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleCollapse}
+            className="hidden lg:flex h-8 w-8 p-0"
+          >
+            <ChevronLeftIcon className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
-      {/* User info */}
+      {/* Station Selector */}
       {user && (
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center space-x-3">
-            <div className="h-8 w-8 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center">
-              <span className="text-sm font-medium text-brand-700 dark:text-brand-300">
-                {user.name.charAt(0).toUpperCase()}
+        <div className="px-3 py-4 border-b border-gray-200 dark:border-gray-700">
+          {!collapsed ? (
+            <div 
+              className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors"
+              onClick={() => setStationSelectorOpen(!stationSelectorOpen)}
+            >
+              <div className="flex items-center space-x-3 min-w-0">
+                <div className="h-8 w-8 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center">
+                  <span className="text-sm font-medium text-brand-700 dark:text-brand-300">
+                    {user.station?.numero?.slice(-2) || 'ES'}
+                  </span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                    {user.station?.nombre || 'Sin estación asignada'}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    {user.station?.municipio}, {user.station?.entidad}
+                  </p>
+                </div>
+              </div>
+              <ChevronDownIcon className={cn(
+                "h-4 w-4 text-gray-400 transition-transform",
+                stationSelectorOpen && "rotate-180"
+              )} />
+            </div>
+          ) : (
+            <div className="flex justify-center">
+              <div className="h-8 w-8 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center">
+                <span className="text-sm font-medium text-brand-700 dark:text-brand-300">
+                  {user.station?.numero?.slice(-2) || 'ES'}
+                </span>
+              </div>
+            </div>
+          )}
+          
+          {stationSelectorOpen && !collapsed && (
+            <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
+              <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Estación actual:</p>
+              <p className="text-xs font-mono text-gray-800 dark:text-gray-200">
+                {user.station?.numero}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Quick Stats Widget */}
+      {user && !collapsed && (
+        <div className="px-3 py-3 border-b border-gray-200 dark:border-gray-700">
+          <div className="bg-gradient-to-r from-brand-50 to-blue-50 dark:from-brand-900/20 dark:to-blue-900/20 rounded-lg p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-300">Plan Actual</span>
+              <span className="text-xs px-2 py-1 bg-brand-100 dark:bg-brand-800 text-brand-700 dark:text-brand-300 rounded-full font-medium">
+                {user.subscription_tier}
               </span>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                {user.name}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                {user.station?.name || 'No station assigned'}
-              </p>
+            <div className="grid grid-cols-2 gap-2 text-center">
+              <div>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">24</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Alertas</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">98%</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Uptime</p>
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        {navigation.map((item) => {
+      <nav className="flex-1 px-3 py-4 space-y-1" role="navigation" aria-label="Main navigation">
+        {navigation.map((item, index) => {
           const isActive = location.pathname === item.href || 
             (item.href !== '/dashboard' && location.pathname.startsWith(item.href));
           
@@ -102,36 +212,70 @@ export const Sidebar = () => {
               to={item.href}
               onClick={handleNavClick}
               className={cn(
-                'group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors',
+                'group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500',
+                collapsed ? 'justify-center' : '',
                 isActive
                   ? 'bg-brand-100 dark:bg-brand-900 text-brand-700 dark:text-brand-300'
                   : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
               )}
+              title={collapsed ? `${item.name} (Alt+${index + 1})` : `Alt+${index + 1}`}
+              aria-label={`${item.name} (Alt+${index + 1})`}
             >
               <item.icon
                 className={cn(
-                  'mr-3 h-5 w-5 flex-shrink-0 transition-colors',
+                  'h-5 w-5 flex-shrink-0 transition-colors',
+                  collapsed ? '' : 'mr-3',
                   isActive
                     ? 'text-brand-600 dark:text-brand-400'
                     : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400'
                 )}
               />
-              {item.name}
-              {item.badge && (
-                <span className="ml-auto inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full">
-                  {item.badge}
-                </span>
+              {!collapsed && (
+                <>
+                  {item.name}
+                  {item.badge && (
+                    <span className="ml-auto inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full">
+                      {item.badge}
+                    </span>
+                  )}
+                </>
               )}
             </Link>
           );
         })}
       </nav>
 
+      {/* Expand button when collapsed */}
+      {collapsed && (
+        <div className="px-3 py-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleCollapse}
+            className="w-full h-8 p-0"
+            aria-label="Expand sidebar"
+          >
+            <ChevronDownIcon className="h-4 w-4 rotate-90" />
+          </Button>
+        </div>
+      )}
+
       {/* Footer */}
       <div className="shrink-0 px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          v{import.meta.env.VITE_APP_VERSION || '1.0.0'}
-        </p>
+        {!collapsed ? (
+          <>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+              v{import.meta.env.VITE_APP_VERSION || '1.0.0'}
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">
+              Alt+1-5 para navegación
+            </p>
+          </>
+        ) : (
+          <div className="text-center">
+            <div className="h-2 w-2 rounded-full bg-green-400 mx-auto" title="Sistema activo" />
+          </div>
+        )}
       </div>
     </div>
   );
