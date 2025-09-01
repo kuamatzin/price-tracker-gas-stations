@@ -43,6 +43,18 @@ class DeepSeekService
         });
     }
 
+    public function generatePricingRecommendation(array $marketData): array
+    {
+        $cacheKey = 'deepseek:recommendation:' . md5(json_encode($marketData));
+        
+        return Cache::remember($cacheKey, 1800, function () use ($marketData) {
+            $prompt = $this->buildRecommendationPrompt($marketData);
+            $systemPrompt = $this->buildRecommendationSystemPrompt();
+            
+            return $this->sendRecommendationRequest($prompt, $systemPrompt);
+        });
+    }
+
     private function sendRequest(string $query, array $context): array
     {
         // Check circuit breaker
@@ -224,5 +236,167 @@ class DeepSeekService
                 'threshold' => self::$circuitBreakerThreshold
             ]);
         }
+    }
+
+    /**
+     * Build recommendation system prompt
+     */
+    private function buildRecommendationSystemPrompt(): string
+    {
+        $prompt = "Eres un experto estratega en precios de gasolina en México con 20 años de experiencia. ";
+        $prompt .= "Tu tarea es analizar datos del mercado y proporcionar recomendaciones estratégicas de precio. ";
+        $prompt .= "Debes considerar: competencia local, tendencias del mercado, márgenes de ganancia, y psicología del consumidor. ";
+        $prompt .= "Responde SIEMPRE en formato JSON con la estructura: ";
+        $prompt .= '{"recommendation": "string", "suggested_actions": ["string"], "risk_level": "low|medium|high", "confidence": 0.0-1.0, "reasoning": "string"}. ';
+        $prompt .= "La recomendación debe ser concisa (2-3 oraciones), práctica y orientada a la acción. ";
+        $prompt .= "Usa español mexicano profesional pero accesible.";
+        
+        return $prompt;
+    }
+
+    /**
+     * Build recommendation prompt with market data
+     */
+    private function buildRecommendationPrompt(array $marketData): string
+    {
+        $prompt = "Analiza estos datos del mercado de gasolina:\n\n";
+        
+        if (isset($marketData['current_prices'])) {
+            $prompt .= "Precios actuales de la estación:\n";
+            foreach ($marketData['current_prices'] as $fuel => $price) {
+                $prompt .= "- " . ucfirst($fuel) . ": $" . number_format($price, 2) . "\n";
+            }
+        }
+        
+        if (isset($marketData['market_average'])) {
+            $prompt .= "\nPromedios del mercado local:\n";
+            foreach ($marketData['market_average'] as $fuel => $avg) {
+                $prompt .= "- " . ucfirst($fuel) . ": $" . number_format($avg, 2) . "\n";
+            }
+        }
+        
+        if (isset($marketData['trend'])) {
+            $prompt .= "\nTendencia últimos 7 días: " . $marketData['trend'] . "\n";
+        }
+        
+        if (isset($marketData['ranking'])) {
+            $prompt .= "\nPosición competitiva:\n";
+            foreach ($marketData['ranking'] as $fuel => $position) {
+                $prompt .= "- " . ucfirst($fuel) . ": #" . $position['position'] . " de " . $position['total'] . "\n";
+            }
+        }
+        
+        if (isset($marketData['competitor_count'])) {
+            $prompt .= "\nCompetidores en 5km: " . $marketData['competitor_count'] . "\n";
+        }
+        
+        $prompt .= "\nProporciona una recomendación estratégica de precio considerando estos datos.";
+        
+        return $prompt;
+    }
+
+    /**
+     * Send recommendation request to DeepSeek
+     */
+    private function sendRecommendationRequest(string $prompt, string $systemPrompt): array
+    {
+        // Check circuit breaker
+        if ($this->isCircuitOpen()) {
+            // Return fallback recommendation
+            return $this->getFallbackRecommendation();
+        }
+        
+        $attempt = 0;
+        $lastException = null;
+
+        while ($attempt < $this->maxRetries) {
+            try {
+                $startTime = microtime(true);
+                
+                $response = Http::withHeaders([
+                    'Authorization' => 'Bearer ' . $this->apiKey,
+                    'Content-Type' => 'application/json',
+                ])
+                ->timeout($this->timeout)
+                ->post($this->apiUrl . '/chat/completions', [
+                    'model' => $this->model,
+                    'messages' => [
+                        ['role' => 'system', 'content' => $systemPrompt],
+                        ['role' => 'user', 'content' => $prompt]
+                    ],
+                    'temperature' => 0.7, // Slightly higher for creative recommendations
+                    'max_tokens' => $this->maxTokens,
+                    'response_format' => ['type' => 'json_object']
+                ]);
+
+                $responseTime = (microtime(true) - $startTime) * 1000;
+
+                if (!$response->successful()) {
+                    throw new ExternalServiceException(
+                        'DeepSeek API error: ' . $response->body(),
+                        $response->status()
+                    );
+                }
+
+                $data = $response->json();
+                
+                if (!isset($data['choices'][0]['message']['content'])) {
+                    throw new ExternalServiceException('Invalid DeepSeek response structure');
+                }
+
+                $content = json_decode($data['choices'][0]['message']['content'], true);
+                
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    throw new ExternalServiceException('Invalid JSON in DeepSeek response');
+                }
+
+                // Reset circuit breaker on success
+                $this->recordSuccess();
+                
+                return array_merge($content, [
+                    'response_time_ms' => (int) $responseTime,
+                    'attempt' => $attempt + 1,
+                    'ai_generated' => true
+                ]);
+
+            } catch (\Exception $e) {
+                $this->recordFailure();
+                $lastException = $e;
+                $attempt++;
+                
+                if ($attempt < $this->maxRetries) {
+                    $delay = $this->retryDelay * pow(2, $attempt - 1);
+                    usleep((int)($delay * 1000000));
+                    continue;
+                }
+            }
+        }
+
+        Log::error('DeepSeek recommendation generation failed', [
+            'error' => $lastException ? $lastException->getMessage() : 'Unknown error',
+            'prompt' => substr($prompt, 0, 200) // Log first 200 chars only
+        ]);
+
+        // Return fallback recommendation
+        return $this->getFallbackRecommendation();
+    }
+
+    /**
+     * Get fallback recommendation when AI is unavailable
+     */
+    private function getFallbackRecommendation(): array
+    {
+        return [
+            'recommendation' => 'Mantén tus precios actuales y monitorea cambios del mercado. Revisa tu posición competitiva diariamente.',
+            'suggested_actions' => [
+                'Monitorear precios de competidores cercanos',
+                'Revisar tendencias del mercado cada 24 horas',
+                'Ajustar precios gradualmente según demanda'
+            ],
+            'risk_level' => 'medium',
+            'confidence' => 0.5,
+            'reasoning' => 'Recomendación basada en mejores prácticas del sector (AI no disponible)',
+            'ai_generated' => false
+        ];
     }
 }
