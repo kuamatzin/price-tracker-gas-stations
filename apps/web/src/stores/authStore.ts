@@ -1,5 +1,7 @@
-import { create } from 'zustand';
-import { devtools, persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { devtools, persist } from "zustand/middleware";
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
 interface User {
   id: string;
@@ -14,7 +16,7 @@ interface User {
     };
   } | null;
   preferences: {
-    theme: 'light' | 'dark';
+    theme: "light" | "dark";
     notifications: boolean;
     autoRefresh: boolean;
     refreshInterval: number;
@@ -29,10 +31,20 @@ interface AuthState {
   error: string | null;
 }
 
+interface RegistrationResult {
+  success: boolean;
+  validationErrors?: Record<string, string[]>;
+}
+
 interface AuthActions {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
-  register: (email: string, password: string, name: string) => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    passwordConfirmation: string,
+    name: string,
+  ) => Promise<RegistrationResult>;
   refreshToken: () => Promise<void>;
   updateUser: (user: Partial<User>) => void;
   setError: (error: string | null) => void;
@@ -60,14 +72,14 @@ export const useAuthStore = create<AuthStore>()(
           set({ isLoading: true, error: null });
           try {
             // TODO: Replace with actual API call
-            const response = await fetch('/api/auth/login', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+            const response = await fetch(`${API_URL}/auth/login`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ email, password }),
             });
 
             if (!response.ok) {
-              throw new Error('Login failed');
+              throw new Error("Login failed");
             }
 
             const data = await response.json();
@@ -79,7 +91,7 @@ export const useAuthStore = create<AuthStore>()(
             });
           } catch (error) {
             set({
-              error: error instanceof Error ? error.message : 'Login failed',
+              error: error instanceof Error ? error.message : "Login failed",
               isLoading: false,
             });
           }
@@ -92,35 +104,66 @@ export const useAuthStore = create<AuthStore>()(
             isAuthenticated: false,
             error: null,
           });
-          localStorage.removeItem('auth-storage');
+          localStorage.removeItem("auth-storage");
         },
 
-        register: async (email: string, password: string, name: string) => {
+        register: async (
+          email: string,
+          password: string,
+          passwordConfirmation: string,
+          name: string,
+        ): Promise<RegistrationResult> => {
           set({ isLoading: true, error: null });
           try {
-            // TODO: Replace with actual API call
-            const response = await fetch('/api/auth/register', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email, password, name }),
+            const response = await fetch(`${API_URL}/auth/register`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                email,
+                password,
+                password_confirmation: passwordConfirmation,
+                name,
+              }),
             });
 
-            if (!response.ok) {
-              throw new Error('Registration failed');
+            const data = await response.json();
+
+            if (response.status === 422 && data.error?.validation_errors) {
+              // Handle validation errors
+              set({ isLoading: false });
+              return {
+                success: false,
+                validationErrors: data.error.validation_errors,
+              };
             }
 
-            const data = await response.json();
+            if (!response.ok) {
+              // Handle other errors
+              const errorMessage =
+                data.error?.detail || data.message || "Registration failed";
+              set({
+                error: errorMessage,
+                isLoading: false,
+              });
+              return { success: false };
+            }
+
+            // Success - expect data.data structure from API
+            const userData = data.data || data;
             set({
-              user: data.user,
-              token: data.token,
+              user: userData.user,
+              token: userData.token,
               isAuthenticated: true,
               isLoading: false,
             });
+            return { success: true };
           } catch (error) {
             set({
-              error: error instanceof Error ? error.message : 'Registration failed',
+              error:
+                error instanceof Error ? error.message : "Registration failed",
               isLoading: false,
             });
+            return { success: false };
           }
         },
 
@@ -130,21 +173,21 @@ export const useAuthStore = create<AuthStore>()(
 
           try {
             // TODO: Replace with actual API call
-            const response = await fetch('/api/auth/refresh', {
-              method: 'POST',
+            const response = await fetch(`${API_URL}/auth/refresh`, {
+              method: "POST",
               headers: {
-                'Content-Type': 'application/json',
+                "Content-Type": "application/json",
                 Authorization: `Bearer ${token}`,
               },
             });
 
             if (!response.ok) {
-              throw new Error('Token refresh failed');
+              throw new Error("Token refresh failed");
             }
 
             const data = await response.json();
             set({ token: data.token });
-          } catch (error) {
+          } catch {
             // If refresh fails, logout
             get().logout();
           }
@@ -169,17 +212,17 @@ export const useAuthStore = create<AuthStore>()(
         },
       }),
       {
-        name: 'auth-storage',
+        name: "auth-storage",
         partialize: (state) => ({
           user: state.user,
           token: state.token,
           isAuthenticated: state.isAuthenticated,
         }),
-      }
+      },
     ),
     {
-      name: 'auth-store',
-      enabled: import.meta.env.VITE_ENABLE_DEVTOOLS === 'true',
-    }
-  )
+      name: "auth-store",
+      enabled: import.meta.env.VITE_ENABLE_DEVTOOLS === "true",
+    },
+  ),
 );

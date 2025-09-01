@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('nlp_queries', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('user_id')->nullable();
+            $table->uuid('user_id')->nullable();
             $table->string('chat_id');
             $table->text('original_query');
             $table->text('normalized_query')->nullable();
