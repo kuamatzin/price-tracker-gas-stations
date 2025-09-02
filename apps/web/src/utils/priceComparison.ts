@@ -158,8 +158,7 @@ export const calculateMarketPosition = (
  * Calculate comprehensive price ranking statistics
  */
 export const calculatePriceRanking = (
-  prices: Array<{ price: number; stationId: string }>,
-  fuelType: FuelType
+  prices: Array<{ price: number; stationId: string }>
 ): PriceRanking => {
   const validPrices = prices.filter(p => p.price > 0);
   

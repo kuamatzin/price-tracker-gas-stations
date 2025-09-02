@@ -12,11 +12,11 @@ vi.mock('lucide-react', () => ({
 
 // Mock UI components
 vi.mock('@/components/ui/card', () => ({
-  Card: ({ children, className }: any) => <div className={className} data-testid="card">{children}</div>,
+  Card: ({ children, className }: { children: React.ReactNode; className?: string }) => <div className={className} data-testid="card">{children}</div>,
 }));
 
 vi.mock('@/components/ui/badge', () => ({
-  Badge: ({ children, variant, className }: any) => (
+  Badge: ({ children, variant, className }: { children: React.ReactNode; variant?: string; className?: string }) => (
     <span className={className} data-testid="badge" data-variant={variant}>
       {children}
     </span>
@@ -142,8 +142,8 @@ describe('PriceCard', () => {
     // Mock Date.now to control relative time calculation
     const mockNow = new Date('2024-01-01T12:30:00Z');
     vi.spyOn(Date, 'now').mockReturnValue(mockNow.getTime());
-    vi.spyOn(global, 'Date').mockImplementation((...args) => 
-      args.length ? new (Date as any)(...args) : mockNow
+    vi.spyOn(global, 'Date').mockImplementation((...args: ConstructorParameters<typeof Date>) => 
+      args.length ? new (Date as DateConstructor)(...args) : mockNow
     );
 
     render(
@@ -161,8 +161,8 @@ describe('PriceCard', () => {
   it('should handle different time periods in timestamp', () => {
     const mockNow = new Date('2024-01-01T14:00:00Z');
     vi.spyOn(Date, 'now').mockReturnValue(mockNow.getTime());
-    vi.spyOn(global, 'Date').mockImplementation((...args) => 
-      args.length ? new (Date as any)(...args) : mockNow
+    vi.spyOn(global, 'Date').mockImplementation((...args: ConstructorParameters<typeof Date>) => 
+      args.length ? new (Date as DateConstructor)(...args) : mockNow
     );
 
     // Test hours
@@ -213,7 +213,7 @@ describe('PriceCard', () => {
     render(<PriceCard {...defaultProps} />);
     
     expect(screen.getByTestId('minus')).toBeInTheDocument();
-    expect(screen.queryByText(/\+|\-/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/[+\-]/)).not.toBeInTheDocument();
   });
 
   it('should not show market comparison when not available', () => {

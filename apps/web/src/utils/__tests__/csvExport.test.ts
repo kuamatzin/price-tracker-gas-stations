@@ -233,7 +233,7 @@ describe('csvExport', () => {
     });
 
     it('should detect invalid data types', () => {
-      const result = validateExportData('not-an-array' as any);
+      const result = validateExportData('not-an-array' as unknown as ExportableStation[]);
       
       expect(result.isValid).toBe(false);
       expect(result.errors).toContain('Los datos deben ser un arreglo de estaciones');

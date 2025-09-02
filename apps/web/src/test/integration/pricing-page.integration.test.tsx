@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import Prices from '../../pages/Prices';
@@ -7,7 +7,7 @@ import { usePricingStore } from '../../stores/pricingStore';
 
 // Mock components and dependencies
 vi.mock('../../components/features/pricing/PriceCard', () => ({
-  default: ({ fuelType, currentPrice, isLoading }: any) => (
+  default: ({ fuelType, currentPrice, isLoading }: { fuelType: string; currentPrice: number; isLoading?: boolean }) => (
     <div data-testid={`price-card-${fuelType}`}>
       {isLoading ? 'Loading...' : `${fuelType}: $${currentPrice}`}
     </div>
@@ -15,12 +15,12 @@ vi.mock('../../components/features/pricing/PriceCard', () => ({
 }));
 
 vi.mock('../../components/features/competitors/CompetitorTable', () => ({
-  default: ({ competitors, isLoading, onStationClick }: any) => (
+  default: ({ competitors, isLoading, onStationClick }: { competitors: unknown[]; isLoading?: boolean; onStationClick?: (station: unknown) => void }) => (
     <div data-testid="competitor-table">
       {isLoading ? 'Loading competitors...' : (
         <div>
           <div>Competitors: {competitors.length}</div>
-          {competitors.map((station: any, index: number) => (
+          {competitors.map((station: { nombre: string; regular: number; numero: string }, index: number) => (
             <div 
               key={station.numero}
               data-testid={`competitor-${index}`}
@@ -37,12 +37,12 @@ vi.mock('../../components/features/competitors/CompetitorTable', () => ({
 }));
 
 vi.mock('../../components/features/map/StationMap', () => ({
-  default: ({ stations, isLoading, onStationClick }: any) => (
+  default: ({ stations, isLoading, onStationClick }: { stations: unknown[]; isLoading?: boolean; onStationClick?: (station: unknown) => void }) => (
     <div data-testid="station-map">
       {isLoading ? 'Loading map...' : (
         <div>
           <div>Map stations: {stations.length}</div>
-          {stations.map((station: any, index: number) => (
+          {stations.map((station: { nombre: string; numero: string }, index: number) => (
             <div 
               key={station.numero}
               data-testid={`map-station-${index}`}
@@ -59,7 +59,7 @@ vi.mock('../../components/features/map/StationMap', () => ({
 }));
 
 vi.mock('../../components/features/filters/PriceFilters', () => ({
-  default: ({ filters, onFiltersChange, availableBrands }: any) => (
+  default: ({ filters, onFiltersChange, availableBrands }: { filters: { radius: number; fuelType: string }; onFiltersChange: (filters: unknown) => void; availableBrands: string[] }) => (
     <div data-testid="price-filters">
       <div>Current radius: {filters.radius}km</div>
       <div>Fuel type: {filters.fuelType}</div>
@@ -100,7 +100,7 @@ vi.mock('../../hooks/use-toast', () => ({
 
 // Mock Tabs component
 vi.mock('@/components/ui/tabs', () => ({
-  Tabs: ({ children, value, onValueChange }: any) => (
+  Tabs: ({ children, value, onValueChange }: { children: React.ReactNode; value: string; onValueChange: (value: string) => void }) => (
     <div data-testid="tabs" data-value={value}>
       <button
         data-testid="tab-table"
@@ -119,18 +119,18 @@ vi.mock('@/components/ui/tabs', () => ({
       {children}
     </div>
   ),
-  TabsList: ({ children }: any) => <div data-testid="tabs-list">{children}</div>,
-  TabsTrigger: ({ children, value }: any) => (
+  TabsList: ({ children }: { children: React.ReactNode }) => <div data-testid="tabs-list">{children}</div>,
+  TabsTrigger: ({ children, value }: { children: React.ReactNode; value: string }) => (
     <button data-testid={`trigger-${value}`}>{children}</button>
   ),
-  TabsContent: ({ children, value }: any) => (
+  TabsContent: ({ children, value }: { children: React.ReactNode; value: string }) => (
     <div data-testid={`content-${value}`}>{children}</div>
   ),
 }));
 
 // Mock Button component
 vi.mock('@/components/ui/Button', () => ({
-  Button: ({ children, onClick, disabled, className, ...props }: any) => (
+  Button: ({ children, onClick, disabled, className, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { children: React.ReactNode }) => (
     <button 
       onClick={onClick}
       disabled={disabled}
@@ -210,7 +210,7 @@ describe('Prices Page Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset store state
-    vi.mocked(usePricingStore).mockReturnValue(initialStoreState as any);
+    vi.mocked(usePricingStore).mockReturnValue(initialStoreState as ReturnType<typeof usePricingStore>);
   });
 
   afterEach(() => {
@@ -269,7 +269,7 @@ describe('Prices Page Integration', () => {
   describe('loading states', () => {
     it('should show loading state for price cards', () => {
       const loadingState = { ...initialStoreState, isLoading: true };
-      vi.mocked(usePricingStore).mockReturnValue(loadingState as any);
+      vi.mocked(usePricingStore).mockReturnValue(loadingState as ReturnType<typeof usePricingStore>);
 
       render(
         <TestWrapper>
@@ -282,7 +282,7 @@ describe('Prices Page Integration', () => {
 
     it('should show loading state for competitors', () => {
       const loadingState = { ...initialStoreState, isLoading: true };
-      vi.mocked(usePricingStore).mockReturnValue(loadingState as any);
+      vi.mocked(usePricingStore).mockReturnValue(loadingState as ReturnType<typeof usePricingStore>);
 
       render(
         <TestWrapper>
@@ -295,7 +295,7 @@ describe('Prices Page Integration', () => {
 
     it('should disable buttons during loading', () => {
       const loadingState = { ...initialStoreState, isLoading: true };
-      vi.mocked(usePricingStore).mockReturnValue(loadingState as any);
+      vi.mocked(usePricingStore).mockReturnValue(loadingState as ReturnType<typeof usePricingStore>);
 
       render(
         <TestWrapper>
@@ -314,7 +314,7 @@ describe('Prices Page Integration', () => {
         ...initialStoreState,
         error: 'Failed to fetch data'
       };
-      vi.mocked(usePricingStore).mockReturnValue(errorState as any);
+      vi.mocked(usePricingStore).mockReturnValue(errorState as ReturnType<typeof usePricingStore>);
 
       render(
         <TestWrapper>
@@ -332,7 +332,7 @@ describe('Prices Page Integration', () => {
         ...initialStoreState,
         error: 'Failed to fetch data'
       };
-      vi.mocked(usePricingStore).mockReturnValue(errorState as any);
+      vi.mocked(usePricingStore).mockReturnValue(errorState as ReturnType<typeof usePricingStore>);
 
       render(
         <TestWrapper>
@@ -353,7 +353,7 @@ describe('Prices Page Integration', () => {
         ...initialStoreState,
         refreshData: mockRefreshData
       };
-      vi.mocked(usePricingStore).mockReturnValue(stateWithRefresh as any);
+      vi.mocked(usePricingStore).mockReturnValue(stateWithRefresh as ReturnType<typeof usePricingStore>);
 
       render(
         <TestWrapper>
@@ -370,7 +370,7 @@ describe('Prices Page Integration', () => {
         ...initialStoreState,
         autoRefreshEnabled: true
       };
-      vi.mocked(usePricingStore).mockReturnValue(autoRefreshState as any);
+      vi.mocked(usePricingStore).mockReturnValue(autoRefreshState as ReturnType<typeof usePricingStore>);
 
       render(
         <TestWrapper>
@@ -456,7 +456,7 @@ describe('Prices Page Integration', () => {
         ...initialStoreState,
         competitors: []
       };
-      vi.mocked(usePricingStore).mockReturnValue(noCompetitorsState as any);
+      vi.mocked(usePricingStore).mockReturnValue(noCompetitorsState as ReturnType<typeof usePricingStore>);
 
       render(
         <TestWrapper>
@@ -477,7 +477,7 @@ describe('Prices Page Integration', () => {
         ...initialStoreState,
         setFilters: mockSetFilters
       };
-      vi.mocked(usePricingStore).mockReturnValue(stateWithSetFilters as any);
+      vi.mocked(usePricingStore).mockReturnValue(stateWithSetFilters as ReturnType<typeof usePricingStore>);
 
       render(
         <TestWrapper>
@@ -497,7 +497,7 @@ describe('Prices Page Integration', () => {
         filters: { fuelType: 'premium' as const, radius: 15, brands: ['Shell'] },
         availableBrands: ['Shell', 'Pemex', 'BP']
       };
-      vi.mocked(usePricingStore).mockReturnValue(customFilterState as any);
+      vi.mocked(usePricingStore).mockReturnValue(customFilterState as ReturnType<typeof usePricingStore>);
 
       render(
         <TestWrapper>
@@ -626,7 +626,7 @@ describe('Prices Page Integration', () => {
         ...initialStoreState,
         ...mockFetchFunctions
       };
-      vi.mocked(usePricingStore).mockReturnValue(stateWithMockFetch as any);
+      vi.mocked(usePricingStore).mockReturnValue(stateWithMockFetch as ReturnType<typeof usePricingStore>);
 
       render(
         <TestWrapper>

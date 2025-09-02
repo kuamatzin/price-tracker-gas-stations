@@ -31,8 +31,6 @@ vi.mock('../../services/api/pricing.service', async () => {
 });
 
 describe('pricingStore', () => {
-  let mockService: any;
-
   beforeEach(() => {
     // Reset store state before each test
     usePricingStore.getState().clearCache();
