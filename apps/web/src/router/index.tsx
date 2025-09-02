@@ -2,6 +2,9 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { lazy, Suspense } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { PublicRoute } from '@/components/auth/PublicRoute';
+import { RoleBasedRoute } from '@/components/auth/RoleBasedRoute';
+import { RouteTransition } from '@/components/auth/RouteTransition';
 import LoadingScreen from '@/components/common/LoadingScreen';
 import NotFound from '@/components/common/NotFound';
 
@@ -13,10 +16,12 @@ const Prices = lazy(() => import('@/pages/Prices'));
 const Analytics = lazy(() => import('@/pages/Analytics'));
 const Settings = lazy(() => import('@/pages/Settings'));
 
-// Wrapper for lazy loaded components with loading state
+// Wrapper for lazy loaded components with loading state and transitions
 const LazyWrapper = ({ children }: { children: React.ReactNode }) => (
   <Suspense fallback={<LoadingScreen />}>
-    {children}
+    <RouteTransition>
+      {children}
+    </RouteTransition>
   </Suspense>
 );
 
@@ -28,17 +33,21 @@ export const router = createBrowserRouter([
   {
     path: '/login',
     element: (
-      <LazyWrapper>
-        <Login />
-      </LazyWrapper>
+      <PublicRoute>
+        <LazyWrapper>
+          <Login />
+        </LazyWrapper>
+      </PublicRoute>
     ),
   },
   {
     path: '/register',
     element: (
-      <LazyWrapper>
-        <Register />
-      </LazyWrapper>
+      <PublicRoute>
+        <LazyWrapper>
+          <Register />
+        </LazyWrapper>
+      </PublicRoute>
     ),
   },
   {
@@ -63,33 +72,41 @@ export const router = createBrowserRouter([
           {
             index: true,
             element: (
-              <LazyWrapper>
-                <Prices />
-              </LazyWrapper>
+              <ProtectedRoute requiresStation={true}>
+                <LazyWrapper>
+                  <Prices />
+                </LazyWrapper>
+              </ProtectedRoute>
             ),
           },
           {
             path: 'current',
             element: (
-              <LazyWrapper>
-                <Prices />
-              </LazyWrapper>
+              <ProtectedRoute requiresStation={true}>
+                <LazyWrapper>
+                  <Prices />
+                </LazyWrapper>
+              </ProtectedRoute>
             ),
           },
           {
             path: 'history',
             element: (
-              <LazyWrapper>
-                <Prices />
-              </LazyWrapper>
+              <ProtectedRoute requiresStation={true}>
+                <LazyWrapper>
+                  <Prices />
+                </LazyWrapper>
+              </ProtectedRoute>
             ),
           },
           {
             path: 'compare',
             element: (
-              <LazyWrapper>
-                <Prices />
-              </LazyWrapper>
+              <ProtectedRoute requiresStation={true}>
+                <LazyWrapper>
+                  <Prices />
+                </LazyWrapper>
+              </ProtectedRoute>
             ),
           },
         ],
@@ -97,9 +114,11 @@ export const router = createBrowserRouter([
       {
         path: 'analytics',
         element: (
-          <LazyWrapper>
-            <Analytics />
-          </LazyWrapper>
+          <RoleBasedRoute allowedRoles={['premium', 'enterprise']}>
+            <LazyWrapper>
+              <Analytics />
+            </LazyWrapper>
+          </RoleBasedRoute>
         ),
       },
       {

@@ -51,6 +51,7 @@ const getTierColor = (tier: string) => {
 
 // Get user initials for avatar
 const getUserInitials = (name: string) => {
+  if (!name || name.trim() === '') return 'U';
   return name
     .split(' ')
     .map(part => part.charAt(0).toUpperCase())
@@ -109,7 +110,8 @@ export const UserMenu = () => {
         variant="ghost"
         onClick={toggleMenu}
         className={cn(
-          "flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-700",
+          "flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors",
+          "hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
           isOpen && "bg-gray-100 dark:bg-gray-700"
         )}
         aria-expanded={isOpen}
@@ -117,7 +119,7 @@ export const UserMenu = () => {
         aria-label="User menu"
       >
         {/* Avatar */}
-        <div className="h-8 w-8 rounded-full bg-brand-600 flex items-center justify-center text-white text-sm font-medium">
+        <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium">
           {getUserInitials(user.name)}
         </div>
         
@@ -140,22 +142,22 @@ export const UserMenu = () => {
         />
       </Button>
 
-      {/* Dropdown Menu */}
+      {/* Mobile backdrop */}
       {isOpen && (
-        <>
-          {/* Mobile backdrop */}
-          <div className="fixed inset-0 z-10 lg:hidden" onClick={() => setIsOpen(false)} />
-          
-          {/* Menu */}
-          <div className={cn(
-            "absolute right-0 z-20 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2",
-            "origin-top-right animate-in fade-in slide-in-from-top-2 duration-200"
-          )}>
+        <div className="fixed inset-0 z-40 lg:hidden" onClick={() => setIsOpen(false)} />
+      )}
+
+      {/* Dropdown Menu */}
+      <div className={cn(
+        "absolute right-0 z-50 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-2",
+        "origin-top-right transition-all duration-200 ease-out transform",
+        isOpen ? "opacity-100 scale-100 translate-y-0 pointer-events-auto" : "opacity-0 scale-95 -translate-y-1 pointer-events-none"
+      )}>
             
             {/* User Profile Header */}
             <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center space-x-3">
-                <div className="h-12 w-12 rounded-full bg-brand-600 flex items-center justify-center text-white font-medium">
+                <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium">
                   {getUserInitials(user.name)}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -229,9 +231,7 @@ export const UserMenu = () => {
                 Cerrar Sesión
               </button>
             </div>
-          </div>
-        </>
-      )}
+      </div>
     </div>
   );
 };
