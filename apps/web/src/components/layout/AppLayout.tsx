@@ -28,8 +28,8 @@ export const AppLayout = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Sidebar for desktop */}
-      <div className="hidden lg:block">
+      {/* Desktop Sidebar - Fixed Position */}
+      <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-50 lg:block lg:w-64">
         <Sidebar />
       </div>
 
@@ -49,12 +49,8 @@ export const AppLayout = () => {
         <Sidebar />
       </div>
 
-      {/* Main content */}
-      <div className={`
-        transition-all duration-300 ease-in-out
-        ${sidebarOpen ? 'lg:pl-64' : 'lg:pl-0'}
-        pb-16 lg:pb-0
-      `}>
+      {/* Main content - Always account for sidebar space on desktop */}
+      <div className="pb-16 lg:pb-0 lg:pl-64">
         {/* Header */}
         <Header />
 

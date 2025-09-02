@@ -89,10 +89,13 @@ export const Header = () => {
             {user?.station && (
               <div className="hidden md:block text-right">
                 <p className="text-sm font-medium text-gray-900 dark:text-white">
-                  {user.station.name}
+                  {user.station.nombre}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {user.station.location.lat.toFixed(4)}, {user.station.location.lng.toFixed(4)}
+                  {user.station.municipio}, {user.station.entidad}
+                </p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  {user.station.numero}
                 </p>
               </div>
             )}
@@ -115,7 +118,7 @@ export const Header = () => {
             <NotificationBell count={unreadCount} />
 
             {/* User menu */}
-            <UserMenu user={user} />
+            <UserMenu />
           </div>
         </div>
       </div>

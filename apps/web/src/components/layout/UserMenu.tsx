@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -17,7 +18,13 @@ const ChevronDownIcon = ({ className }: { className?: string }) => (
 
 const LogoutIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+  </svg>
+);
+
+const BuildingOfficeIcon = ({ className }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15l-.75 18h-13.5L4.5 3zM9 9h1.5m-1.5 3h1.5m-1.5 3h1.5M12 9h1.5m-1.5 3h1.5m-1.5 3h1.5" />
   </svg>
 );
 
@@ -28,87 +35,203 @@ const SettingsIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-interface UserMenuProps {
-  user: any;
-}
+// Subscription tier colors
+const getTierColor = (tier: string) => {
+  switch (tier.toLowerCase()) {
+    case 'premium':
+      return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400';
+    case 'pro':
+      return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
+    case 'basic':
+      return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+    default:
+      return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
+  }
+};
 
-export const UserMenu = ({ user }: UserMenuProps) => {
+// Get user initials for avatar
+const getUserInitials = (name: string) => {
+  if (!name || name.trim() === '') return 'U';
+  return name
+    .split(' ')
+    .map(part => part.charAt(0).toUpperCase())
+    .join('')
+    .slice(0, 2);
+};
+
+export const UserMenu = () => {
+  const { user, logout } = useAuthStore();
   const [isOpen, setIsOpen] = useState(false);
-  const { logout } = useAuthStore();
+  const menuRef = useRef<HTMLDivElement>(null);
 
-  if (!user) return null;
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
 
-  const handleLogout = () => {
-    logout();
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen]);
+
+  // Close menu on escape key
+  useEffect(() => {
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeydown);
+    return () => document.removeEventListener('keydown', handleKeydown);
+  }, [isOpen]);
+
+  const handleLogout = async () => {
     setIsOpen(false);
+    await logout();
   };
 
+  const toggleMenu = () => {
+    setIsOpen(!isOpen);
+  };
+
+  if (!user) {
+    return null;
+  }
+
   return (
-    <div className="relative">
+    <div className="relative" ref={menuRef}>
+      {/* User Profile Button */}
       <Button
         variant="ghost"
-        size="sm"
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 px-3"
+        onClick={toggleMenu}
+        className={cn(
+          "flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors",
+          "hover:bg-gray-100 dark:hover:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
+          isOpen && "bg-gray-100 dark:bg-gray-700"
+        )}
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
+        aria-label="User menu"
       >
-        <div className="h-7 w-7 rounded-full bg-brand-100 dark:bg-brand-900 flex items-center justify-center">
-          <span className="text-xs font-medium text-brand-700 dark:text-brand-300">
-            {user.name.charAt(0).toUpperCase()}
-          </span>
+        {/* Avatar */}
+        <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-medium">
+          {getUserInitials(user.name)}
         </div>
-        <span className="hidden md:block text-sm font-medium text-gray-700 dark:text-gray-300">
-          {user.name}
-        </span>
-        <ChevronDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+        
+        {/* User Info - Hidden on mobile */}
+        <div className="hidden lg:block text-left min-w-0">
+          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+            {user.name}
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+            {user.email}
+          </p>
+        </div>
+
+        {/* Chevron Icon */}
+        <ChevronDownIcon 
+          className={cn(
+            "h-4 w-4 text-gray-400 transition-transform duration-200",
+            isOpen && "rotate-180"
+          )}
+        />
       </Button>
 
-      {/* Dropdown menu */}
+      {/* Mobile backdrop */}
       {isOpen && (
-        <>
-          <div
-            className="fixed inset-0 z-10"
-            onClick={() => setIsOpen(false)}
-          />
-          <div className="absolute right-0 z-20 mt-2 w-56 origin-top-right rounded-md bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-            <div className="py-1">
-              {/* User info */}
-              <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-                <p className="text-sm font-medium text-gray-900 dark:text-white">
-                  {user.name}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {user.email}
-                </p>
-                {user.station && (
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                    {user.station.name}
-                  </p>
-                )}
-              </div>
+        <div className="fixed inset-0 z-40 lg:hidden" onClick={() => setIsOpen(false)} />
+      )}
 
-              {/* Menu items */}
-              <div className="py-1">
-                <Link
-                  to="/settings"
-                  onClick={() => setIsOpen(false)}
-                  className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                  <SettingsIcon className="h-4 w-4 mr-3" />
-                  Settings
-                </Link>
-                
-                <button
-                  onClick={handleLogout}
-                  className="flex w-full items-center px-4 py-2 text-sm text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-                >
-                  <LogoutIcon className="h-4 w-4 mr-3" />
-                  Sign out
-                </button>
+      {/* Dropdown Menu */}
+      <div className={cn(
+        "absolute right-0 z-50 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-2",
+        "origin-top-right transition-all duration-200 ease-out transform",
+        isOpen ? "opacity-100 scale-100 translate-y-0 pointer-events-auto" : "opacity-0 scale-95 -translate-y-1 pointer-events-none"
+      )}>
+            
+            {/* User Profile Header */}
+            <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center space-x-3">
+                <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium">
+                  {getUserInitials(user.name)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                    {user.name}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    {user.email}
+                  </p>
+                  <div className={cn(
+                    "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-1",
+                    getTierColor(user.subscription_tier)
+                  )}>
+                    {user.subscription_tier}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </>
-      )}
+
+            {/* Station Information */}
+            {user.station && (
+              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-start space-x-3">
+                  <BuildingOfficeIcon className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      {user.station.nombre}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {user.station.municipio}, {user.station.entidad}
+                    </p>
+                    <p className="text-xs font-mono text-gray-400 dark:text-gray-500 mt-1">
+                      {user.station.numero}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Menu Items */}
+            <div className="py-2">
+              {/* Profile Link */}
+              <Link
+                to="/profile"
+                className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                onClick={() => setIsOpen(false)}
+              >
+                <UserIcon className="h-4 w-4 mr-3 text-gray-400" />
+                Perfil
+              </Link>
+
+              {/* Settings Link */}
+              <Link
+                to="/settings"
+                className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                onClick={() => setIsOpen(false)}
+              >
+                <SettingsIcon className="h-4 w-4 mr-3 text-gray-400" />
+                Configuración
+              </Link>
+
+              {/* Divider */}
+              <hr className="my-2 border-gray-200 dark:border-gray-700" />
+
+              {/* Logout Button */}
+              <button
+                onClick={handleLogout}
+                className="flex items-center w-full px-4 py-2 text-sm text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              >
+                <LogoutIcon className="h-4 w-4 mr-3" />
+                Cerrar Sesión
+              </button>
+            </div>
+      </div>
     </div>
   );
 };

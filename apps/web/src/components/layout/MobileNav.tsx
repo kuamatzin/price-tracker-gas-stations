@@ -1,5 +1,9 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { useAuthStore } from '@/stores/authStore';
+import { useUIStore } from '@/stores/uiStore';
 
 // Simple icon components (same as in Sidebar)
 const DashboardIcon = ({ className }: { className?: string }) => (
@@ -27,40 +31,210 @@ const SettingsIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const AlertsIcon = ({ className }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+  </svg>
+);
+
+const MenuIcon = ({ className }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+  </svg>
+);
+
+const XMarkIcon = ({ className }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+  </svg>
+);
+
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: DashboardIcon },
-  { name: 'Prices', href: '/prices', icon: PricesIcon },
-  { name: 'Analytics', href: '/analytics', icon: AnalyticsIcon },
-  { name: 'Settings', href: '/settings', icon: SettingsIcon },
+  { name: 'Inicio', href: '/dashboard', icon: DashboardIcon },
+  { name: 'Precios', href: '/prices', icon: PricesIcon },
+  { name: 'Análisis', href: '/analytics', icon: AnalyticsIcon },
+  { name: 'Alertas', href: '/alerts', icon: AlertsIcon },
+  { name: 'Configuración', href: '/settings', icon: SettingsIcon },
+];
+
+const mobileMenuItems = [
+  { name: 'Perfil', href: '/profile', icon: null },
+  { name: 'Ayuda', href: '/help', icon: null },
+  { name: 'Cerrar Sesión', href: '#', icon: null, action: 'logout' },
 ];
 
 export const MobileNav = () => {
   const location = useLocation();
+  const { logout } = useAuthStore();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  // Minimum distance to trigger swipe
+  const minSwipeDistance = 50;
+
+  const handleDrawerToggle = () => {
+    setDrawerOpen(!drawerOpen);
+  };
+
+  const handleMenuItemClick = async (item: any) => {
+    if (item.action === 'logout') {
+      await logout();
+      return;
+    }
+    setDrawerOpen(false);
+  };
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    
+    if (isLeftSwipe && drawerOpen) {
+      setDrawerOpen(false);
+    }
+    if (isRightSwipe && !drawerOpen) {
+      setDrawerOpen(true);
+    }
+  };
+
+  // Close drawer when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (drawerOpen && !target.closest('.mobile-drawer') && !target.closest('.hamburger-menu')) {
+        setDrawerOpen(false);
+      }
+    };
+
+    if (drawerOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.body.style.overflow = 'unset';
+    };
+  }, [drawerOpen]);
+
+  // Handle safe area insets
+  useEffect(() => {
+    const updateSafeAreaInsets = () => {
+      const root = document.documentElement;
+      const style = getComputedStyle(root);
+      const safeAreaInsetBottom = style.getPropertyValue('env(safe-area-inset-bottom)') || '0px';
+      
+      // Apply safe area padding to mobile nav
+      const mobileNav = document.querySelector('.mobile-nav');
+      if (mobileNav instanceof HTMLElement) {
+        mobileNav.style.paddingBottom = safeAreaInsetBottom;
+      }
+    };
+
+    updateSafeAreaInsets();
+    window.addEventListener('resize', updateSafeAreaInsets);
+    
+    return () => window.removeEventListener('resize', updateSafeAreaInsets);
+  }, []);
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 lg:hidden">
-      <div className="grid grid-cols-4 h-16">
-        {navigation.map((item) => {
-          const isActive = location.pathname === item.href || 
-            (item.href !== '/dashboard' && location.pathname.startsWith(item.href));
-          
-          return (
-            <Link
+    <>
+      {/* Overlay */}
+      {drawerOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden transition-opacity"
+          onClick={() => setDrawerOpen(false)}
+        />
+      )}
+
+      {/* Slide-out Drawer */}
+      <div 
+        className={cn(
+          "mobile-drawer fixed top-0 right-0 h-full w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 z-50 transform transition-transform duration-300 ease-in-out lg:hidden",
+          drawerOpen ? "translate-x-0" : "translate-x-full"
+        )}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Menú</h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setDrawerOpen(false)}
+            className="h-8 w-8 p-0"
+          >
+            <XMarkIcon className="h-5 w-5" />
+          </Button>
+        </div>
+        
+        <div className="py-4">
+          {mobileMenuItems.map((item) => (
+            <button
               key={item.name}
-              to={item.href}
-              className={cn(
-                'flex flex-col items-center justify-center px-3 py-2 text-xs font-medium transition-colors',
-                isActive
-                  ? 'text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/20'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-              )}
+              onClick={() => handleMenuItemClick(item)}
+              className="w-full text-left px-4 py-3 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
-              <item.icon className="h-6 w-6 mb-1" />
-              <span>{item.name}</span>
-            </Link>
-          );
-        })}
+              {item.name}
+            </button>
+          ))}
+        </div>
       </div>
-    </div>
+
+      {/* Bottom Navigation Bar */}
+      <div className="mobile-nav fixed bottom-0 left-0 right-0 z-30 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 lg:hidden">
+        <div className="grid grid-cols-5 h-16">
+          {/* Main Navigation Items */}
+          {navigation.slice(0, 4).map((item) => {
+            const isActive = location.pathname === item.href || 
+              (item.href !== '/dashboard' && location.pathname.startsWith(item.href));
+            
+            return (
+              <Link
+                key={item.name}
+                to={item.href}
+                className={cn(
+                  'flex flex-col items-center justify-center px-2 py-2 text-xs font-medium transition-colors',
+                  isActive
+                    ? 'text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-900/20'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                )}
+              >
+                <item.icon className="h-5 w-5 mb-1" />
+                <span className="truncate">{item.name}</span>
+              </Link>
+            );
+          })}
+          
+          {/* Hamburger Menu Button */}
+          <Button
+            variant="ghost"
+            className="hamburger-menu flex flex-col items-center justify-center px-2 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors h-auto"
+            onClick={handleDrawerToggle}
+          >
+            {drawerOpen ? (
+              <XMarkIcon className="h-5 w-5 mb-1" />
+            ) : (
+              <MenuIcon className="h-5 w-5 mb-1" />
+            )}
+            <span className="truncate">Más</span>
+          </Button>
+        </div>
+      </div>
+    </>
   );
 };

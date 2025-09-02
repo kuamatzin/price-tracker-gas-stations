@@ -144,29 +144,17 @@ class ApiClient {
 
   private async performTokenRefresh(): Promise<string> {
     const authStore = useAuthStore.getState();
-    const currentToken = authStore.token;
-
-    if (!currentToken) {
-      throw new Error('No token available for refresh');
-    }
-
+    
     try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/auth/refresh`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${currentToken}`,
-          },
-        }
-      );
-
-      const { token } = response.data;
+      // Use the auth store's refresh method which handles localStorage updates
+      await authStore.refresh();
       
-      // Update the token in the auth store
-      useAuthStore.setState({ token });
+      const newToken = authStore.token;
+      if (!newToken) {
+        throw new Error('Token refresh failed - no token returned');
+      }
       
-      return token;
+      return newToken;
     } catch (error) {
       throw new Error('Token refresh failed');
     }

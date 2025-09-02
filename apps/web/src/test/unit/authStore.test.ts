@@ -23,9 +23,11 @@ describe('AuthStore', () => {
     useAuthStore.setState({
       user: null,
       token: null,
+      expiresAt: null,
       isAuthenticated: false,
       isLoading: false,
       error: null,
+      rememberMe: false,
     });
   });
 
@@ -39,9 +41,11 @@ describe('AuthStore', () => {
       
       expect(state.user).toBeNull();
       expect(state.token).toBeNull();
+      expect(state.expiresAt).toBeNull();
       expect(state.isAuthenticated).toBe(false);
       expect(state.isLoading).toBe(false);
       expect(state.error).toBeNull();
+      expect(state.rememberMe).toBe(false);
     });
   });
 
@@ -51,18 +55,19 @@ describe('AuthStore', () => {
         id: '1',
         email: 'test@example.com',
         name: 'Test User',
-        station: null,
-        preferences: {
-          theme: 'light' as const,
-          notifications: true,
-          autoRefresh: true,
-          refreshInterval: 5,
+        station: {
+          numero: 'E12345',
+          nombre: 'Test Station',
+          municipio: 'Test City',
+          entidad: 'Test State',
         },
+        subscription_tier: 'premium',
       };
 
       const mockResponse = {
         user: mockUser,
         token: 'mock-token',
+        expires_at: '2024-12-31T23:59:59Z',
       };
 
       (fetch as any).mockResolvedValueOnce({
@@ -71,31 +76,40 @@ describe('AuthStore', () => {
       });
 
       const { login } = useAuthStore.getState();
-      await login('test@example.com', 'password');
+      await login('test@example.com', 'password', true);
 
       const state = useAuthStore.getState();
       expect(state.user).toEqual(mockUser);
       expect(state.token).toBe('mock-token');
+      expect(state.expiresAt).toBe('2024-12-31T23:59:59Z');
       expect(state.isAuthenticated).toBe(true);
+      expect(state.rememberMe).toBe(true);
       expect(state.isLoading).toBe(false);
       expect(state.error).toBeNull();
+
+      // Check localStorage calls
+      expect(localStorageMock.setItem).toHaveBeenCalledWith('fuelintel_token', 'mock-token');
+      expect(localStorageMock.setItem).toHaveBeenCalledWith('fuelintel_token_expiry', '2024-12-31T23:59:59Z');
+      expect(localStorageMock.setItem).toHaveBeenCalledWith('fuelintel_user', JSON.stringify(mockUser));
     });
 
     it('should handle login failure', async () => {
       (fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 401,
+        json: async () => ({ error: 'Invalid credentials' }),
       });
 
       const { login } = useAuthStore.getState();
-      await login('test@example.com', 'wrong-password');
+      
+      await expect(login('test@example.com', 'wrong-password', false)).rejects.toThrow();
 
       const state = useAuthStore.getState();
       expect(state.user).toBeNull();
       expect(state.token).toBeNull();
       expect(state.isAuthenticated).toBe(false);
       expect(state.isLoading).toBe(false);
-      expect(state.error).toBe('Login failed');
+      expect(state.error).toBe('Invalid credentials');
     });
 
     it('should set loading state during login', async () => {
@@ -107,7 +121,7 @@ describe('AuthStore', () => {
       (fetch as any).mockReturnValueOnce(loginPromise);
 
       const { login } = useAuthStore.getState();
-      const loginCall = login('test@example.com', 'password');
+      const loginCall = login('test@example.com', 'password', false);
 
       // Check loading state
       expect(useAuthStore.getState().isLoading).toBe(true);
@@ -115,7 +129,7 @@ describe('AuthStore', () => {
       // Resolve the promise
       resolvePromise!({
         ok: true,
-        json: async () => ({ user: {}, token: 'token' }),
+        json: async () => ({ user: {}, token: 'token', expires_at: '2024-12-31T23:59:59Z' }),
       });
 
       await loginCall;
@@ -124,23 +138,35 @@ describe('AuthStore', () => {
   });
 
   describe('Logout', () => {
-    it('should clear user data on logout', () => {
+    it('should clear user data on logout', async () => {
+      // Mock fetch for logout API call
+      (fetch as any).mockResolvedValueOnce({ ok: true });
+      
       // Set some initial state
       useAuthStore.setState({
         user: { id: '1', email: 'test@example.com', name: 'Test' } as any,
         token: 'token',
+        expiresAt: '2024-12-31T23:59:59Z',
         isAuthenticated: true,
+        rememberMe: true,
         error: 'some error',
       });
 
       const { logout } = useAuthStore.getState();
-      logout();
+      await logout();
 
       const state = useAuthStore.getState();
       expect(state.user).toBeNull();
       expect(state.token).toBeNull();
+      expect(state.expiresAt).toBeNull();
       expect(state.isAuthenticated).toBe(false);
+      expect(state.rememberMe).toBe(false);
       expect(state.error).toBeNull();
+      
+      // Check localStorage cleanup
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('fuelintel_token');
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('fuelintel_token_expiry');
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('fuelintel_user');
       expect(localStorageMock.removeItem).toHaveBeenCalledWith('auth-storage');
     });
   });
@@ -171,7 +197,9 @@ describe('AuthStore', () => {
       });
 
       const { register } = useAuthStore.getState();
-      await register('new@example.com', 'password', 'New User');
+      const result = await register('new@example.com', 'password', 'password', 'New User');
+      
+      expect(result.success).toBe(true);
 
       const state = useAuthStore.getState();
       expect(state.user).toEqual(mockUser);
@@ -183,11 +211,13 @@ describe('AuthStore', () => {
       (fetch as any).mockResolvedValueOnce({
         ok: false,
         status: 400,
+        json: async () => ({ error: { detail: 'Registration failed' } }),
       });
 
       const { register } = useAuthStore.getState();
-      await register('invalid@example.com', 'password', 'User');
+      const result = await register('invalid@example.com', 'password', 'password', 'User');
 
+      expect(result.success).toBe(false);
       const state = useAuthStore.getState();
       expect(state.user).toBeNull();
       expect(state.isAuthenticated).toBe(false);
