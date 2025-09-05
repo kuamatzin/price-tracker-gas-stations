@@ -1,189 +1,272 @@
-import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
+import { create } from "zustand";
+import { devtools, persist } from "zustand/middleware";
+import { FuelType } from "@fuelintel/shared";
 
 interface Station {
-  id: string;
-  name: string;
-  brand: string;
-  location: {
-    lat: number;
-    lng: number;
-    address: string;
-    municipality: string;
-    state: string;
+  numero: string;
+  nombre: string;
+  brand?: string;
+  direccion: string;
+  lat: number;
+  lng: number;
+  entidad_id: number;
+  municipio_id: number;
+  is_active: boolean;
+}
+
+interface PriceData {
+  station_numero: string;
+  fuel_type: FuelType;
+  price: number;
+  previousPrice?: number;
+  changed_at: string;
+  detected_at: string;
+}
+
+interface CompetitorData extends Station {
+  prices: {
+    [key in FuelType]?: number;
   };
   distance?: number;
-  prices: Record<FuelType, number>;
-  lastUpdated: string;
+  lastUpdated?: string;
 }
 
-interface PriceChange {
-  id: string;
-  stationId: string;
-  fuelType: FuelType;
-  oldPrice: number;
-  newPrice: number;
-  change: number;
-  percentage: number;
-  timestamp: string;
+interface PriceFilters {
+  fuelType?: "all" | FuelType;
+  radius: number;
+  brands: string[];
 }
 
-type FuelType = 'regular' | 'premium' | 'diesel';
+interface PriceCacheEntry {
+  data: PriceData[];
+  timestamp: number;
+}
 
 interface PricingState {
-  currentPrices: Record<FuelType, number>;
-  competitors: Station[];
-  history: PriceChange[];
-  lastUpdated: string;
-  isLoading: boolean;
-  error: string | null;
-  filters: {
-    radius: number;
-    fuelTypes: FuelType[];
-    brands: string[];
-    sortBy: 'price' | 'distance' | 'name';
-    sortOrder: 'asc' | 'desc';
-  };
+  // Current station context
+  selectedStationNumero: string | null;
+  selectedStation: Station | null;
+
+  // Price data
+  currentPrices: Map<string, PriceData[]>;
+  competitors: CompetitorData[];
+
+  // Filters
+  filters: PriceFilters;
+
+  // Loading states
+  isLoadingPrices: boolean;
+  isLoadingCompetitors: boolean;
+
+  // Error states
+  pricesError: string | null;
+  competitorsError: string | null;
+
+  // Cache
+  priceCache: Map<string, PriceCacheEntry>;
 }
 
 interface PricingActions {
-  fetchCurrentPrices: () => Promise<void>;
-  fetchCompetitors: (radius?: number) => Promise<void>;
-  fetchHistory: (days?: number) => Promise<void>;
-  updatePrice: (fuelType: FuelType, price: number) => Promise<void>;
-  setFilters: (filters: Partial<PricingState['filters']>) => void;
-  clearError: () => void;
+  // Actions
+  setSelectedStation: (station: Station) => void;
+  setCurrentPrices: (stationNumero: string, prices: PriceData[]) => void;
+  setCompetitors: (competitors: CompetitorData[]) => void;
+  setFilter: <K extends keyof PriceFilters>(
+    key: K,
+    value: PriceFilters[K],
+  ) => void;
+  resetFilters: () => void;
+  setLoadingPrices: (loading: boolean) => void;
+  setLoadingCompetitors: (loading: boolean) => void;
+  setPricesError: (error: string | null) => void;
+  setCompetitorsError: (error: string | null) => void;
+  clearCacheForStation: (stationNumero: string) => void;
+  clearAllCache: () => void;
+
+  // Computed getters
+  getStationPrices: (stationNumero: string) => PriceData[] | undefined;
+  getFilteredCompetitors: () => CompetitorData[];
+  isCacheValid: (stationNumero: string) => boolean;
 }
 
 type PricingStore = PricingState & PricingActions;
 
+const DEFAULT_FILTERS: PriceFilters = {
+  fuelType: "all",
+  radius: 10,
+  brands: [],
+};
+
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 const initialState: PricingState = {
-  currentPrices: {
-    regular: 0,
-    premium: 0,
-    diesel: 0,
-  },
+  selectedStationNumero: null,
+  selectedStation: null,
+  currentPrices: new Map(),
   competitors: [],
-  history: [],
-  lastUpdated: '',
-  isLoading: false,
-  error: null,
-  filters: {
-    radius: 5,
-    fuelTypes: ['regular', 'premium', 'diesel'],
-    brands: [],
-    sortBy: 'distance',
-    sortOrder: 'asc',
-  },
+  filters: DEFAULT_FILTERS,
+  isLoadingPrices: false,
+  isLoadingCompetitors: false,
+  pricesError: null,
+  competitorsError: null,
+  priceCache: new Map(),
 };
 
 export const usePricingStore = create<PricingStore>()(
   devtools(
-    (set, get) => ({
-      ...initialState,
+    persist(
+      (set, get) => ({
+        ...initialState,
 
-      fetchCurrentPrices: async () => {
-        set({ isLoading: true, error: null });
-        try {
-          // TODO: Replace with actual API call
-          const response = await fetch('/api/prices/current');
-          if (!response.ok) throw new Error('Failed to fetch current prices');
-          
-          const data = await response.json();
-          set({
-            currentPrices: data.prices,
-            lastUpdated: data.lastUpdated,
-            isLoading: false,
+        setSelectedStation: (station) => {
+          set((state) => {
+            // Clear cache if switching stations
+            if (state.selectedStationNumero !== station.numero) {
+              state.clearCacheForStation(state.selectedStationNumero || "");
+            }
+            return {
+              selectedStationNumero: station.numero,
+              selectedStation: station,
+              competitors: [], // Reset competitors when switching stations
+            };
           });
-        } catch (error) {
-          set({
-            error: error instanceof Error ? error.message : 'Failed to fetch prices',
-            isLoading: false,
-          });
-        }
-      },
+        },
 
-      fetchCompetitors: async (radius = 5) => {
-        set({ isLoading: true, error: null });
-        try {
-          // TODO: Replace with actual API call
-          const response = await fetch(`/api/competitors?radius=${radius}`);
-          if (!response.ok) throw new Error('Failed to fetch competitors');
-          
-          const data = await response.json();
-          set({
-            competitors: data.stations,
-            isLoading: false,
-          });
-        } catch (error) {
-          set({
-            error: error instanceof Error ? error.message : 'Failed to fetch competitors',
-            isLoading: false,
-          });
-        }
-      },
+        setCurrentPrices: (stationNumero, prices) => {
+          set((state) => {
+            const newPrices = new Map(state.currentPrices);
+            newPrices.set(stationNumero, prices);
 
-      fetchHistory: async (days = 30) => {
-        set({ isLoading: true, error: null });
-        try {
-          // TODO: Replace with actual API call
-          const response = await fetch(`/api/prices/history?days=${days}`);
-          if (!response.ok) throw new Error('Failed to fetch price history');
-          
-          const data = await response.json();
-          set({
-            history: data.changes,
-            isLoading: false,
-          });
-        } catch (error) {
-          set({
-            error: error instanceof Error ? error.message : 'Failed to fetch history',
-            isLoading: false,
-          });
-        }
-      },
+            // Update cache
+            const newCache = new Map(state.priceCache);
+            newCache.set(stationNumero, {
+              data: prices,
+              timestamp: Date.now(),
+            });
 
-      updatePrice: async (fuelType: FuelType, price: number) => {
-        set({ isLoading: true, error: null });
-        try {
-          // TODO: Replace with actual API call
-          const response = await fetch('/api/prices/update', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fuelType, price }),
+            return {
+              currentPrices: newPrices,
+              priceCache: newCache,
+              isLoadingPrices: false,
+              pricesError: null,
+            };
           });
-          
-          if (!response.ok) throw new Error('Failed to update price');
-          
+        },
+
+        setCompetitors: (competitors) => {
+          set({
+            competitors,
+            isLoadingCompetitors: false,
+            competitorsError: null,
+          });
+        },
+
+        setFilter: (key, value) => {
           set((state) => ({
-            currentPrices: {
-              ...state.currentPrices,
-              [fuelType]: price,
+            filters: {
+              ...state.filters,
+              [key]: value,
             },
-            lastUpdated: new Date().toISOString(),
-            isLoading: false,
           }));
-        } catch (error) {
-          set({
-            error: error instanceof Error ? error.message : 'Failed to update price',
-            isLoading: false,
+        },
+
+        resetFilters: () => {
+          set({ filters: DEFAULT_FILTERS });
+        },
+
+        setLoadingPrices: (loading) => {
+          set({ isLoadingPrices: loading });
+        },
+
+        setLoadingCompetitors: (loading) => {
+          set({ isLoadingCompetitors: loading });
+        },
+
+        setPricesError: (error) => {
+          set({ pricesError: error, isLoadingPrices: false });
+        },
+
+        setCompetitorsError: (error) => {
+          set({ competitorsError: error, isLoadingCompetitors: false });
+        },
+
+        clearCacheForStation: (stationNumero) => {
+          set((state) => {
+            const newCache = new Map(state.priceCache);
+            newCache.delete(stationNumero);
+
+            const newPrices = new Map(state.currentPrices);
+            newPrices.delete(stationNumero);
+
+            return {
+              priceCache: newCache,
+              currentPrices: newPrices,
+            };
           });
-        }
-      },
+        },
 
-      setFilters: (filters: Partial<PricingState['filters']>) => {
-        set((state) => ({
-          filters: { ...state.filters, ...filters },
-        }));
-      },
+        clearAllCache: () => {
+          set({
+            priceCache: new Map(),
+            currentPrices: new Map(),
+            competitors: [],
+          });
+        },
 
-      clearError: () => {
-        set({ error: null });
+        getStationPrices: (stationNumero) => {
+          const state = get();
+          return state.currentPrices.get(stationNumero);
+        },
+
+        getFilteredCompetitors: () => {
+          const state = get();
+          const { filters, competitors } = state;
+
+          let filtered = [...competitors];
+
+          // Filter by radius
+          if (filters.radius) {
+            filtered = filtered.filter(
+              (c) => (c.distance || 0) <= filters.radius,
+            );
+          }
+
+          // Filter by brands
+          if (filters.brands.length > 0) {
+            filtered = filtered.filter(
+              (c) => c.brand && filters.brands.includes(c.brand),
+            );
+          }
+
+          // Filter by fuel type
+          if (filters.fuelType && filters.fuelType !== "all") {
+            filtered = filtered.filter(
+              (c) => c.prices[filters.fuelType as FuelType] !== undefined,
+            );
+          }
+
+          return filtered;
+        },
+
+        isCacheValid: (stationNumero) => {
+          const state = get();
+          const cacheEntry = state.priceCache.get(stationNumero);
+
+          if (!cacheEntry) return false;
+
+          const now = Date.now();
+          return now - cacheEntry.timestamp < CACHE_TTL;
+        },
+      }),
+      {
+        name: "pricing-store",
+        partialize: (state) => ({
+          selectedStationNumero: state.selectedStationNumero,
+          selectedStation: state.selectedStation,
+          filters: state.filters,
+        }),
       },
-    }),
-    {
-      name: 'pricing-store',
-      enabled: import.meta.env.VITE_ENABLE_DEVTOOLS === 'true',
-    }
-  )
+    ),
+    { name: "PricingStore" },
+  ),
 );
