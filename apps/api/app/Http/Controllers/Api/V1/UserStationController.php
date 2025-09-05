@@ -58,13 +58,11 @@ class UserStationController extends Controller
             'role' => $role,
         ]);
         
-        $station = Station::with(['municipio.entidad'])->find($validated['station_numero']);
-        
-        // Manually set the pivot data for the resource
-        $station->pivot = (object) [
-            'role' => $role,
-            'created_at' => now(),
-        ];
+        // Reload the station with the pivot data from the relationship
+        $station = Auth::user()->stations()
+            ->with(['municipio.entidad'])
+            ->where('station_numero', $validated['station_numero'])
+            ->first();
         
         return response()->json([
             'message' => 'Station assigned successfully',
@@ -95,7 +93,7 @@ class UserStationController extends Controller
     /**
      * Search available stations to assign.
      */
-    public function search(Request $request): JsonResponse
+    public function search(Request $request)
     {
         $validated = $request->validate([
             'q' => 'nullable|string|min:2',

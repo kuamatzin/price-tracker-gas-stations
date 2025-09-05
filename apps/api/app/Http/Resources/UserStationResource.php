@@ -33,10 +33,10 @@ class UserStationResource extends JsonResource
                     ];
                 }),
             ],
-            'user_role' => $this->whenPivotLoaded('user_stations', function () {
+            'role' => $this->when($this->pivot, function () {
                 return $this->pivot->role;
             }),
-            'assigned_at' => $this->whenPivotLoaded('user_stations', function () {
+            'assigned_at' => $this->when($this->pivot, function () {
                 return $this->pivot->created_at;
             }),
             'is_active' => $this->is_active,
