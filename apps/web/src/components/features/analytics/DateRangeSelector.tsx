@@ -1,149 +1,136 @@
-import { useState, useCallback, useEffect } from 'react';
-import { format, isValid, startOfDay, endOfDay, addDays, subDays } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { useState, useCallback } from 'react';
+import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { Card } from '../../ui/card';
-import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
-import type { DateRange } from '../../../types/charts';
-import { DATE_PRESETS } from '../../../config/charts';
+import { useUIStore } from '../../../stores/uiStore';
+import { formatDate, startOfDay, endOfDay, addDays, subtractDays } from '../../../../../packages/shared/src/utils/date';
 
 interface DateRangeSelectorProps {
-  selectedRange: DateRange;
-  onRangeChange: (range: DateRange) => void;
   className?: string;
   showCustomPicker?: boolean;
 }
 
+const DATE_PRESETS = {
+  '7d': {
+    label: '7 días',
+    getDates: () => ({
+      from: formatDate(subtractDays(new Date(), 7), 'short'),
+      to: formatDate(new Date(), 'short'),
+    }),
+  },
+  '15d': {
+    label: '15 días',
+    getDates: () => ({
+      from: formatDate(subtractDays(new Date(), 15), 'short'),
+      to: formatDate(new Date(), 'short'),
+    }),
+  },
+  '30d': {
+    label: '30 días',
+    getDates: () => ({
+      from: formatDate(subtractDays(new Date(), 30), 'short'),
+      to: formatDate(new Date(), 'short'),
+    }),
+  },
+} as const;
+
 type PresetKey = keyof typeof DATE_PRESETS;
 
 export function DateRangeSelector({
-  selectedRange,
-  onRangeChange,
   className = '',
   showCustomPicker = true,
 }: DateRangeSelectorProps) {
+  const { activeFilters, setFilters } = useUIStore();
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [tempStartDate, setTempStartDate] = useState('');
-  const [tempEndDate, setTempEndDate] = useState('');
+  const [tempFromDate, setTempFromDate] = useState('');
+  const [tempToDate, setTempToDate] = useState('');
   const [validationError, setValidationError] = useState('');
-
-  // Update URL params when range changes
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
-    const url = new URL(window.location.href);
-    const searchParams = url.searchParams;
-    
-    if (selectedRange.preset && selectedRange.preset !== 'custom') {
-      searchParams.set('range', selectedRange.preset);
-      searchParams.delete('start');
-      searchParams.delete('end');
-    } else {
-      searchParams.set('range', 'custom');
-      searchParams.set('start', format(selectedRange.startDate, 'yyyy-MM-dd'));
-      searchParams.set('end', format(selectedRange.endDate, 'yyyy-MM-dd'));
-    }
-    
-    const newUrl = url.toString();
-    window.history.replaceState({}, '', newUrl);
-  }, [selectedRange]);
-
-  // Load range from URL params on mount
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
-    const searchParams = new URLSearchParams(window.location.search);
-    const rangeParam = searchParams.get('range') as PresetKey | 'custom' | null;
-    const startParam = searchParams.get('start');
-    const endParam = searchParams.get('end');
-    
-    if (rangeParam && rangeParam in DATE_PRESETS) {
-      const preset = DATE_PRESETS[rangeParam];
-      const dates = preset.getDates();
-      onRangeChange({
-        preset: rangeParam,
-        ...dates,
-      });
-    } else if (rangeParam === 'custom' && startParam && endParam) {
-      const startDate = new Date(startParam);
-      const endDate = new Date(endParam);
-      
-      if (isValid(startDate) && isValid(endDate)) {
-        onRangeChange({
-          preset: 'custom',
-          startDate,
-          endDate,
-        });
-      }
-    }
-  }, [onRangeChange]);
 
   const handlePresetSelect = useCallback((preset: PresetKey) => {
     const presetConfig = DATE_PRESETS[preset];
     const dates = presetConfig.getDates();
     
-    onRangeChange({
-      preset,
-      ...dates,
+    setFilters({
+      dateRange: dates,
     });
-  }, [onRangeChange]);
+  }, [setFilters]);
+
+  const getCurrentDateRange = useCallback(() => {
+    if (!activeFilters.dateRange.from || !activeFilters.dateRange.to) {
+      // Default to 7 days if no range set
+      const defaultRange = DATE_PRESETS['7d'].getDates();
+      setFilters({ dateRange: defaultRange });
+      return defaultRange;
+    }
+    return activeFilters.dateRange;
+  }, [activeFilters.dateRange, setFilters]);
 
   const handlePreviousPeriod = useCallback(() => {
+    const currentRange = getCurrentDateRange();
+    const fromDate = new Date(currentRange.from);
+    const toDate = new Date(currentRange.to);
+    
     const daysDiff = Math.ceil(
-      (selectedRange.endDate.getTime() - selectedRange.startDate.getTime()) / (1000 * 60 * 60 * 24)
+      (toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)
     );
     
-    const newStartDate = subDays(selectedRange.startDate, daysDiff);
-    const newEndDate = subDays(selectedRange.endDate, daysDiff);
+    const newFromDate = subtractDays(fromDate, daysDiff);
+    const newToDate = subtractDays(toDate, daysDiff);
     
-    onRangeChange({
-      preset: 'custom',
-      startDate: newStartDate,
-      endDate: newEndDate,
+    setFilters({
+      dateRange: {
+        from: formatDate(newFromDate, 'short'),
+        to: formatDate(newToDate, 'short'),
+      },
     });
-  }, [selectedRange, onRangeChange]);
+  }, [getCurrentDateRange, setFilters]);
 
   const handleNextPeriod = useCallback(() => {
+    const currentRange = getCurrentDateRange();
+    const fromDate = new Date(currentRange.from);
+    const toDate = new Date(currentRange.to);
+    
     const daysDiff = Math.ceil(
-      (selectedRange.endDate.getTime() - selectedRange.startDate.getTime()) / (1000 * 60 * 60 * 24)
+      (toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24)
     );
     
-    const newStartDate = addDays(selectedRange.startDate, daysDiff);
-    const newEndDate = addDays(selectedRange.endDate, daysDiff);
+    const newFromDate = addDays(fromDate, daysDiff);
+    const newToDate = addDays(toDate, daysDiff);
     
     // Don't allow future dates beyond today
-    if (newEndDate > new Date()) {
+    if (newToDate > new Date()) {
       return;
     }
     
-    onRangeChange({
-      preset: 'custom',
-      startDate: newStartDate,
-      endDate: newEndDate,
+    setFilters({
+      dateRange: {
+        from: formatDate(newFromDate, 'short'),
+        to: formatDate(newToDate, 'short'),
+      },
     });
-  }, [selectedRange, onRangeChange]);
+  }, [getCurrentDateRange, setFilters]);
 
-  const validateDateRange = useCallback((startStr: string, endStr: string): string => {
-    if (!startStr || !endStr) {
+  const validateDateRange = useCallback((fromStr: string, toStr: string): string => {
+    if (!fromStr || !toStr) {
       return 'Ambas fechas son requeridas';
     }
     
-    const startDate = new Date(startStr);
-    const endDate = new Date(endStr);
+    const fromDate = new Date(fromStr);
+    const toDate = new Date(toStr);
     
-    if (!isValid(startDate) || !isValid(endDate)) {
+    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
       return 'Fechas inválidas';
     }
     
-    if (startDate > endDate) {
+    if (fromDate > toDate) {
       return 'La fecha de inicio debe ser anterior a la fecha de fin';
     }
     
-    if (endDate > new Date()) {
+    if (toDate > new Date()) {
       return 'La fecha de fin no puede ser futura';
     }
     
-    const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    const daysDiff = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24));
     if (daysDiff > 90) {
       return 'El rango máximo es de 90 días';
     }
@@ -152,42 +139,61 @@ export function DateRangeSelector({
   }, []);
 
   const handleCustomDateSubmit = useCallback(() => {
-    const error = validateDateRange(tempStartDate, tempEndDate);
+    const error = validateDateRange(tempFromDate, tempToDate);
     
     if (error) {
       setValidationError(error);
       return;
     }
     
-    const startDate = startOfDay(new Date(tempStartDate));
-    const endDate = endOfDay(new Date(tempEndDate));
+    const fromDate = startOfDay(new Date(tempFromDate));
+    const toDate = endOfDay(new Date(tempToDate));
     
-    onRangeChange({
-      preset: 'custom',
-      startDate,
-      endDate,
+    setFilters({
+      dateRange: {
+        from: formatDate(fromDate, 'short'),
+        to: formatDate(toDate, 'short'),
+      },
     });
     
     setShowDatePicker(false);
     setValidationError('');
-  }, [tempStartDate, tempEndDate, validateDateRange, onRangeChange]);
+  }, [tempFromDate, tempToDate, validateDateRange, setFilters]);
 
   const handleShowCustomPicker = useCallback(() => {
-    setTempStartDate(format(selectedRange.startDate, 'yyyy-MM-dd'));
-    setTempEndDate(format(selectedRange.endDate, 'yyyy-MM-dd'));
+    const currentRange = getCurrentDateRange();
+    setTempFromDate(new Date(currentRange.from).toISOString().split('T')[0]);
+    setTempToDate(new Date(currentRange.to).toISOString().split('T')[0]);
     setValidationError('');
     setShowDatePicker(true);
-  }, [selectedRange]);
+  }, [getCurrentDateRange]);
 
   const formatDateRangeDisplay = useCallback(() => {
-    return `${format(selectedRange.startDate, 'dd MMM', { locale: es })} - ${format(
-      selectedRange.endDate,
-      'dd MMM yyyy',
-      { locale: es }
-    )}`;
-  }, [selectedRange]);
+    const currentRange = getCurrentDateRange();
+    const fromDate = new Date(currentRange.from);
+    const toDate = new Date(currentRange.to);
+    return `${formatDate(fromDate, 'short')} - ${formatDate(toDate, 'short')}`;
+  }, [getCurrentDateRange]);
 
-  const isNextDisabled = addDays(selectedRange.endDate, 1) > new Date();
+  const isNextDisabled = useCallback(() => {
+    const currentRange = getCurrentDateRange();
+    const toDate = new Date(currentRange.to);
+    return addDays(toDate, 1) > new Date();
+  }, [getCurrentDateRange]);
+
+  const getActivePreset = useCallback((): PresetKey | null => {
+    const currentRange = getCurrentDateRange();
+    
+    for (const [key, preset] of Object.entries(DATE_PRESETS)) {
+      const presetRange = preset.getDates();
+      if (presetRange.from === currentRange.from && presetRange.to === currentRange.to) {
+        return key as PresetKey;
+      }
+    }
+    return null;
+  }, [getCurrentDateRange]);
+
+  const activePreset = getActivePreset();
 
   return (
     <div className={`space-y-4 ${className}`}>
@@ -196,7 +202,7 @@ export function DateRangeSelector({
         {(Object.keys(DATE_PRESETS) as PresetKey[]).map((preset) => (
           <Button
             key={preset}
-            variant={selectedRange.preset === preset ? 'default' : 'outline'}
+            variant={activePreset === preset ? 'default' : 'outline'}
             size="sm"
             onClick={() => handlePresetSelect(preset)}
             className="text-sm"
@@ -207,7 +213,7 @@ export function DateRangeSelector({
         
         {showCustomPicker && (
           <Button
-            variant={selectedRange.preset === 'custom' ? 'default' : 'outline'}
+            variant={activePreset === null ? 'default' : 'outline'}
             size="sm"
             onClick={handleShowCustomPicker}
             className="text-sm"
@@ -238,7 +244,7 @@ export function DateRangeSelector({
           variant="outline"
           size="sm"
           onClick={handleNextPeriod}
-          disabled={isNextDisabled}
+          disabled={isNextDisabled()}
           className="text-sm"
         >
           Siguiente
@@ -259,10 +265,10 @@ export function DateRangeSelector({
                 </label>
                 <input
                   type="date"
-                  value={tempStartDate}
-                  onChange={(e) => setTempStartDate(e.target.value)}
+                  value={tempFromDate}
+                  onChange={(e) => setTempFromDate(e.target.value)}
                   className="w-full px-2 py-1 text-sm border rounded-md dark:bg-gray-700 dark:border-gray-600"
-                  max={format(new Date(), 'yyyy-MM-dd')}
+                  max={new Date().toISOString().split('T')[0]}
                 />
               </div>
               
@@ -272,10 +278,10 @@ export function DateRangeSelector({
                 </label>
                 <input
                   type="date"
-                  value={tempEndDate}
-                  onChange={(e) => setTempEndDate(e.target.value)}
+                  value={tempToDate}
+                  onChange={(e) => setTempToDate(e.target.value)}
                   className="w-full px-2 py-1 text-sm border rounded-md dark:bg-gray-700 dark:border-gray-600"
-                  max={format(new Date(), 'yyyy-MM-dd')}
+                  max={new Date().toISOString().split('T')[0]}
                 />
               </div>
             </div>
