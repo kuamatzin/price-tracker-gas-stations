@@ -24,8 +24,8 @@ class RefreshController extends Controller
         // Create new token with same abilities
         $token = $user->createToken('auth-token', $abilities)->plainTextToken;
 
-        // Load station relationship
-        $user->load('station');
+        // Load stations relationship
+        $user->load(['stations.municipio.entidad']);
 
         return response()->json([
             'token' => $token,
@@ -34,12 +34,21 @@ class RefreshController extends Controller
                 'id' => $user->id,
                 'email' => $user->email,
                 'name' => $user->name,
-                'station' => $user->station ? [
-                    'numero' => $user->station->numero,
-                    'nombre' => $user->station->nombre,
-                    'municipio' => $user->station->municipio?->nombre,
-                    'entidad' => $user->station->municipio?->entidad?->nombre,
-                ] : null,
+                'stations' => $user->stations->map(function ($station) {
+                    return [
+                        'numero' => $station->numero,
+                        'nombre' => $station->nombre,
+                        'direccion' => $station->direccion,
+                        'municipio' => $station->municipio?->nombre,
+                        'entidad' => $station->municipio?->entidad?->nombre,
+                        'lat' => $station->lat,
+                        'lng' => $station->lng,
+                        'brand' => $station->brand,
+                        'role' => $station->pivot->role,
+                        'assigned_at' => $station->pivot->created_at,
+                    ];
+                }),
+                'default_station_numero' => $user->stations->first()?->numero,
                 'subscription_tier' => $user->subscription_tier,
             ],
         ], 200);

@@ -15,7 +15,7 @@ class ProfileController extends Controller
     public function show(Request $request): JsonResponse
     {
         $user = $request->user();
-        $user->load('station');
+        $user->load(['stations.municipio.entidad']);
 
         return response()->json([
             'user' => [
@@ -23,15 +23,21 @@ class ProfileController extends Controller
                 'email' => $user->email,
                 'name' => $user->name,
                 'telegram_chat_id' => $user->telegram_chat_id,
-                'station' => $user->station ? [
-                    'numero' => $user->station->numero,
-                    'nombre' => $user->station->nombre,
-                    'franquicia' => $user->station->franquicia,
-                    'direccion' => $user->station->direccion,
-                    'municipio' => $user->station->municipio?->nombre,
-                    'entidad' => $user->station->municipio?->entidad?->nombre,
-                    'coordenadas' => $user->station->coordenadas,
-                ] : null,
+                'stations' => $user->stations->map(function ($station) {
+                    return [
+                        'numero' => $station->numero,
+                        'nombre' => $station->nombre,
+                        'direccion' => $station->direccion,
+                        'municipio' => $station->municipio?->nombre,
+                        'entidad' => $station->municipio?->entidad?->nombre,
+                        'lat' => $station->lat,
+                        'lng' => $station->lng,
+                        'brand' => $station->brand,
+                        'role' => $station->pivot->role,
+                        'assigned_at' => $station->pivot->created_at,
+                    ];
+                }),
+                'default_station_numero' => $user->stations->first()?->numero,
                 'subscription_tier' => $user->subscription_tier,
                 'notification_preferences' => $user->notification_preferences,
                 'api_rate_limit' => $user->api_rate_limit,
@@ -64,16 +70,28 @@ class ProfileController extends Controller
                 ->delete();
         }
 
-        // Update station association if provided
-        if ($request->has('station_numero')) {
-            $user->station()->updateOrCreate(
-                ['user_id' => $user->id],
-                ['station_numero' => $request->station_numero]
+        // Update default station if provided
+        if ($request->has('default_station_numero')) {
+            // Verify user has access to this station
+            $hasStation = $user->stations()
+                ->where('station_numero', $request->default_station_numero)
+                ->exists();
+            
+            if (!$hasStation) {
+                return response()->json([
+                    'error' => 'You do not have access to this station'
+                ], 403);
+            }
+            
+            // Store default station preference (could be in user preferences)
+            $user->notification_preferences = array_merge(
+                $user->notification_preferences ?? [],
+                ['default_station_numero' => $request->default_station_numero]
             );
         }
 
         $user->save();
-        $user->load('station');
+        $user->load(['stations.municipio.entidad']);
 
         return response()->json([
             'message' => 'Perfil actualizado exitosamente.',
@@ -82,15 +100,22 @@ class ProfileController extends Controller
                 'email' => $user->email,
                 'name' => $user->name,
                 'telegram_chat_id' => $user->telegram_chat_id,
-                'station' => $user->station ? [
-                    'numero' => $user->station->numero,
-                    'nombre' => $user->station->nombre,
-                    'franquicia' => $user->station->franquicia,
-                    'direccion' => $user->station->direccion,
-                    'municipio' => $user->station->municipio?->nombre,
-                    'entidad' => $user->station->municipio?->entidad?->nombre,
-                    'coordenadas' => $user->station->coordenadas,
-                ] : null,
+                'stations' => $user->stations->map(function ($station) {
+                    return [
+                        'numero' => $station->numero,
+                        'nombre' => $station->nombre,
+                        'direccion' => $station->direccion,
+                        'municipio' => $station->municipio?->nombre,
+                        'entidad' => $station->municipio?->entidad?->nombre,
+                        'lat' => $station->lat,
+                        'lng' => $station->lng,
+                        'brand' => $station->brand,
+                        'role' => $station->pivot->role,
+                        'assigned_at' => $station->pivot->created_at,
+                    ];
+                }),
+                'default_station_numero' => $user->notification_preferences['default_station_numero'] 
+                    ?? $user->stations->first()?->numero,
                 'subscription_tier' => $user->subscription_tier,
                 'notification_preferences' => $user->notification_preferences,
                 'api_rate_limit' => $user->api_rate_limit,
