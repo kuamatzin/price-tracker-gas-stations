@@ -43,6 +43,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'performance.monitor' => \App\Http\Middleware\PerformanceMonitoring::class,
             'api.version' => \App\Http\Middleware\ApiVersion::class,
             'station.context' => \App\Http\Middleware\EnsureStationContext::class,
+            'station.role' => \App\Http\Middleware\CheckStationRole::class,
         ]);
 
         $middleware->throttleApi('60,1');

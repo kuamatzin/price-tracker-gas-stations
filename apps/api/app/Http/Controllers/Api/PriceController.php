@@ -181,6 +181,12 @@ class PriceController extends BaseApiController
      */
     public function station(string $numero): JsonResponse
     {
+        // Check if user has access to this station
+        $user = auth()->user();
+        if (!$user->stations()->where('station_numero', $numero)->exists()) {
+            return $this->errorResponse('Unauthorized access to station', 403);
+        }
+
         $stationPrices = $this->priceRepository->getStationPrices($numero);
 
         if (! $stationPrices) {

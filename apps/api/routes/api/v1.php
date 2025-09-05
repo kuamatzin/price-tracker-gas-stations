@@ -76,6 +76,12 @@ Route::prefix('v1')->middleware('api.version:v1')->group(function () {
         Route::get('/station/{numero}', [PriceController::class, 'station']);
         Route::get('/nearby', [PriceController::class, 'nearby'])->middleware('station.context');
         Route::get('/history/{station_id}', [HistoryController::class, 'getStationHistory']);
+        
+        // Price management (owners only)
+        Route::middleware('station.role:owner')->group(function () {
+            Route::post('/update', [PriceController::class, 'update']);
+            Route::post('/bulk-update', [PriceController::class, 'bulkUpdate']);
+        });
     });
 
     // Trend endpoints (requires authentication)
@@ -91,9 +97,14 @@ Route::prefix('v1')->middleware('api.version:v1')->group(function () {
 
     // Analysis endpoints (requires authentication)
     Route::prefix('analysis')->middleware(['auth:sanctum', 'performance.monitor'])->group(function () {
+        // Basic analytics (all authenticated users with station access)
         Route::get('/ranking', [AnalysisController::class, 'ranking']);
-        Route::get('/spread', [AnalysisController::class, 'spread']);
-        Route::get('/insights', [AnalysisController::class, 'insights']);
+        
+        // Advanced analytics (owners and managers only)
+        Route::middleware('station.role:owner,manager')->group(function () {
+            Route::get('/spread', [AnalysisController::class, 'spread']);
+            Route::get('/insights', [AnalysisController::class, 'insights']);
+        });
     });
 
     // Geographic aggregation endpoints (requires authentication)
