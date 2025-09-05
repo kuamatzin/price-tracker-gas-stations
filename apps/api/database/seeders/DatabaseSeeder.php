@@ -13,11 +13,19 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        // Seed locations first (estados and municipios)
+        $this->call([
+            LocationSeeder::class,
         ]);
+
+        // Note: Station data should be imported from external source
+        // or use a separate StationSeeder with real data
+        
+        // Seed test users with multi-station support
+        $this->call([
+            MultiStationSeeder::class,
+        ]);
+
+        $this->command->info('Database seeding completed!');
     }
 }
