@@ -4,6 +4,7 @@ import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { TrendChart } from '../../components/charts/TrendChart';
 import { DateRangeSelector } from '../../components/features/analytics/DateRangeSelector';
+import { FuelTypeToggle } from '../../components/features/analytics/FuelTypeToggle';
 import { useUIStore } from '../../stores/uiStore';
 import type { ChartDataPoint, FuelType } from '../../types/charts';
 
@@ -120,6 +121,14 @@ export default function HistoricalTrends() {
     );
   };
 
+  const selectAllFuels = () => {
+    setSelectedFuels(['regular', 'premium', 'diesel']);
+  };
+
+  const deselectAllFuels = () => {
+    setSelectedFuels([]);
+  };
+
   const statistics = {
     regular: calculateStatistics(chartData, 'regular'),
     premium: calculateStatistics(chartData, 'premium'),
@@ -162,23 +171,14 @@ export default function HistoricalTrends() {
             <DateRangeSelector />
           </div>
           
-          <div>
-            <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
-              Tipos de combustible
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {(['regular', 'premium', 'diesel'] as FuelType[]).map((fuel) => (
-                <Button
-                  key={fuel}
-                  variant={selectedFuels.includes(fuel) ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => toggleFuel(fuel)}
-                >
-                  {fuel === 'regular' ? 'Magna' : fuel === 'premium' ? 'Premium' : 'Diésel'}
-                </Button>
-              ))}
-            </div>
-          </div>
+          <FuelTypeToggle
+            selectedFuels={selectedFuels}
+            onFuelToggle={toggleFuel}
+            onSelectAll={selectAllFuels}
+            onDeselectAll={deselectAllFuels}
+            variant="tabs"
+            showSelectAll={true}
+          />
         </div>
       </Card>
 
