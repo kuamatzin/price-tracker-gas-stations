@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\HistoryController;
 use App\Http\Controllers\Api\PriceController;
 use App\Http\Controllers\Api\StatusController;
 use App\Http\Controllers\Api\TrendController;
+use App\Http\Controllers\Api\V1\UserStationController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Auth\PasswordResetController;
@@ -51,6 +52,16 @@ Route::prefix('v1')->middleware('api.version:v1')->group(function () {
         // Profile
         Route::get('/profile', [ProfileController::class, 'show']);
         Route::put('/profile', [ProfileController::class, 'update']);
+        
+        // User Station Management
+        Route::prefix('user/stations')->group(function () {
+            Route::get('/', [UserStationController::class, 'index']);
+            Route::post('/', [UserStationController::class, 'store']);
+            Route::delete('/{numero}', [UserStationController::class, 'destroy']);
+        });
+        
+        // Station Search (available stations)
+        Route::get('/stations/search', [UserStationController::class, 'search']);
     });
 
     // Scraper management endpoints (requires authentication)

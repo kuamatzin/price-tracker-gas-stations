@@ -18,27 +18,36 @@ class Station extends Model
     protected $fillable = [
         'numero',
         'nombre',
-        'franquicia',
         'direccion',
+        'lat',
+        'lng',
         'entidad_id',
         'municipio_id',
-        'coordenadas',
+        'brand',
         'is_active',
     ];
 
     protected $casts = [
-        'coordenadas' => 'array',
+        'lat' => 'decimal:8',
+        'lng' => 'decimal:8',
         'is_active' => 'boolean',
     ];
 
     public function municipio()
     {
-        return $this->belongsTo(Municipio::class, 'municipio_id', 'municipio_id');
+        return $this->belongsTo(Municipio::class, 'municipio_id', 'id');
     }
 
     public function users()
     {
-        return $this->hasMany(UserStation::class, 'station_numero', 'numero');
+        return $this->belongsToMany(
+            User::class,
+            'user_stations',
+            'station_numero',
+            'user_id',
+            'numero',
+            'id'
+        )->withPivot('role')->withTimestamps();
     }
 
     public function priceChanges()

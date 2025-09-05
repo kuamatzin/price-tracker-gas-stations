@@ -54,17 +54,17 @@ class User extends Authenticatable
     }
 
     /**
-     * Get the station associated with the user.
+     * Get the stations associated with the user.
      */
-    public function station()
+    public function stations()
     {
-        return $this->hasOneThrough(
+        return $this->belongsToMany(
             Station::class,
-            UserStation::class,
+            'user_stations',
             'user_id',
-            'numero',
+            'station_numero',
             'id',
-            'station_numero'
-        );
+            'numero'
+        )->withPivot('role')->withTimestamps();
     }
 }
