@@ -23,8 +23,17 @@ class PriceController extends BaseApiController
      *     operationId="getCurrentPrices",
      *     tags={"Prices"},
      *     summary="Get current fuel prices",
-     *     description="Returns latest fuel prices for all stations with optional filters",
+     *     description="Returns latest fuel prices for the selected station",
      *     security={{"sanctum":{}}},
+     *
+     *     @OA\Parameter(
+     *         name="station_numero",
+     *         in="query",
+     *         description="Station number",
+     *         required=true,
+     *
+     *         @OA\Schema(type="string", example="E12345")
+     *     ),
      *
      *     @OA\Parameter(
      *         name="entidad",
@@ -117,6 +126,9 @@ class PriceController extends BaseApiController
     {
         $filters = $request->validated();
         $fresh = $request->boolean('fresh', false);
+        
+        // Add station context to filters
+        $filters['station_numero'] = $request->input('station_numero');
 
         $prices = $this->priceRepository->getCurrentPrices($filters, $fresh);
 
@@ -187,17 +199,16 @@ class PriceController extends BaseApiController
      *     operationId="getNearbyPrices",
      *     tags={"Prices"},
      *     summary="Get nearby station prices",
-     *     description="Returns prices for stations within specified radius of coordinates",
+     *     description="Returns prices for stations within specified radius of the selected station",
      *     security={{"sanctum":{}}},
      *
      *     @OA\RequestBody(
      *         required=true,
      *
      *         @OA\JsonContent(
-     *             required={"lat", "lng"},
+     *             required={"station_numero"},
      *
-     *             @OA\Property(property="lat", type="number", format="float", example=19.4326),
-     *             @OA\Property(property="lng", type="number", format="float", example=-99.1332),
+     *             @OA\Property(property="station_numero", type="string", description="Station number", example="E12345"),
      *             @OA\Property(property="radius", type="integer", description="Radius in kilometers", example=5),
      *             @OA\Property(property="fresh", type="boolean", description="Force fresh data", example=false)
      *         )
@@ -230,10 +241,16 @@ class PriceController extends BaseApiController
     {
         $data = $request->validated();
         $fresh = $request->boolean('fresh', false);
+        
+        // Get the selected station's coordinates
+        $station = $request->input('current_station');
+        if (!$station) {
+            return $this->errorResponse('Station context required', 422);
+        }
 
         $nearbyPrices = $this->priceRepository->getNearbyPrices(
-            $data['lat'],
-            $data['lng'],
+            $station->lat,
+            $station->lng,
             $data['radius'] ?? 5,
             $fresh
         );

@@ -14,8 +14,7 @@ class NearbyPricesRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'lat' => 'required|numeric|between:-90,90',
-            'lng' => 'required|numeric|between:-180,180',
+            'station_numero' => 'required|string|exists:stations,numero',
             'radius' => 'nullable|numeric|min:0.5|max:50',
             'page' => 'nullable|integer|min:1',
             'page_size' => 'nullable|integer|min:1|max:100',
@@ -26,12 +25,8 @@ class NearbyPricesRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'lat.required' => 'La latitud es requerida',
-            'lat.numeric' => 'La latitud debe ser un número',
-            'lat.between' => 'La latitud debe estar entre -90 y 90',
-            'lng.required' => 'La longitud es requerida',
-            'lng.numeric' => 'La longitud debe ser un número',
-            'lng.between' => 'La longitud debe estar entre -180 y 180',
+            'station_numero.required' => 'El número de estación es requerido',
+            'station_numero.exists' => 'La estación especificada no existe',
             'radius.numeric' => 'El radio debe ser un número',
             'radius.min' => 'El radio mínimo es 0.5km',
             'radius.max' => 'El radio máximo es 50km',

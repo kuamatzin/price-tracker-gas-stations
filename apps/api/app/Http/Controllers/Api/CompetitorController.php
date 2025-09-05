@@ -22,8 +22,17 @@ class CompetitorController extends BaseApiController
      *     operationId="getCompetitors",
      *     tags={"Competitors"},
      *     summary="Get competitor analysis",
-     *     description="Returns competitor stations and price comparisons for user's station",
+     *     description="Returns competitor stations and price comparisons for selected station",
      *     security={{"sanctum":{}}},
+     *
+     *     @OA\Parameter(
+     *         name="station_numero",
+     *         in="query",
+     *         description="Station number",
+     *         required=true,
+     *
+     *         @OA\Schema(type="string", example="E12345")
+     *     ),
      *
      *     @OA\Parameter(
      *         name="radius",
@@ -87,23 +96,19 @@ class CompetitorController extends BaseApiController
     public function index(Request $request): JsonResponse
     {
         $request->validate([
+            'station_numero' => 'required|string|exists:stations,numero',
             'radius' => 'nullable|numeric|min:1|max:50',
             'mode' => 'nullable|in:radius,municipio,combined',
         ]);
 
-        $user = $request->user();
-
-        if (! $user->station_numero) {
-            return $this->errorResponse('User does not have an associated station', 400);
-        }
-
+        $stationNumero = $request->input('station_numero');
         $mode = $request->input('mode', 'radius');
         $radius = $request->input('radius', 5);
 
-        $cacheKey = "competitors:{$user->station_numero}:{$mode}:{$radius}";
+        $cacheKey = "competitors:{$stationNumero}:{$mode}:{$radius}";
 
-        $data = Cache::remember($cacheKey, 900, function () use ($user, $mode, $radius) {
-            $station = $this->competitorService->getUserStation($user->station_numero);
+        $data = Cache::remember($cacheKey, 900, function () use ($stationNumero, $mode, $radius) {
+            $station = $this->competitorService->getUserStation($stationNumero);
 
             if (! $station) {
                 return null;

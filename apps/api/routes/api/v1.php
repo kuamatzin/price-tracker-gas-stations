@@ -70,11 +70,11 @@ Route::prefix('v1')->middleware('api.version:v1')->group(function () {
         Route::get('/status', [ScraperTriggerController::class, 'status']);
     });
 
-    // Price endpoints (requires authentication)
+    // Price endpoints (requires authentication and station context)
     Route::prefix('prices')->middleware(['auth:sanctum', 'performance.monitor'])->group(function () {
-        Route::get('/current', [PriceController::class, 'current']);
+        Route::get('/current', [PriceController::class, 'current'])->middleware('station.context');
         Route::get('/station/{numero}', [PriceController::class, 'station']);
-        Route::get('/nearby', [PriceController::class, 'nearby']);
+        Route::get('/nearby', [PriceController::class, 'nearby'])->middleware('station.context');
         Route::get('/history/{station_id}', [HistoryController::class, 'getStationHistory']);
     });
 
@@ -84,9 +84,9 @@ Route::prefix('v1')->middleware('api.version:v1')->group(function () {
         Route::get('/market', [TrendController::class, 'getMarketTrends']);
     });
 
-    // Competitor endpoints (requires authentication)
+    // Competitor endpoints (requires authentication and station context)
     Route::prefix('competitors')->middleware(['auth:sanctum', 'performance.monitor'])->group(function () {
-        Route::get('/', [CompetitorController::class, 'index']);
+        Route::get('/', [CompetitorController::class, 'index'])->middleware('station.context');
     });
 
     // Analysis endpoints (requires authentication)

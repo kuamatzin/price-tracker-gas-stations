@@ -42,6 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'account.lockout' => \App\Http\Middleware\AccountLockout::class,
             'performance.monitor' => \App\Http\Middleware\PerformanceMonitoring::class,
             'api.version' => \App\Http\Middleware\ApiVersion::class,
+            'station.context' => \App\Http\Middleware\EnsureStationContext::class,
         ]);
 
         $middleware->throttleApi('60,1');
