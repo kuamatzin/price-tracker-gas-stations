@@ -9,11 +9,19 @@ import { StationMap } from "@/components/features/map/StationMap";
 import { PriceFilters } from "@/components/features/filters/PriceFilters";
 import { MobileFilterSheet } from "@/components/features/filters/MobileFilterSheet";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { usePricePolling, useStaleDataWarning } from "@/hooks/usePricePolling";
 import { usePricingStore } from "@/stores/pricingStore";
 import { pricingService } from "@/services/pricing.service";
 import { exportToCSV, prepareCompetitorData } from "@/utils/csvExport";
 import { FuelType } from "@fuelintel/shared";
-import { RefreshCw, Download, MapPin, Table2 } from "lucide-react";
+import {
+  RefreshCw,
+  Download,
+  MapPin,
+  Table2,
+  AlertCircle,
+  CheckCircle2,
+} from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
 import { calculateAveragePrice } from "@/utils/priceComparison";
 
@@ -21,6 +29,7 @@ export const CurrentPrices: React.FC = () => {
   const [activeTab, setActiveTab] = useState("table");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [showUpdateIndicator, setShowUpdateIndicator] = useState(false);
 
   const { user } = useAuthStore();
   const {
@@ -52,7 +61,22 @@ export const CurrentPrices: React.FC = () => {
     }
   }, [user, selectedStation, setSelectedStation]);
 
-  // Fetch data when station is selected
+  // Use price polling for automatic updates (5 minutes)
+  const {
+    isUpdating,
+    updateIndicator,
+    manualRefresh: pollManualRefresh,
+  } = usePricePolling(selectedStation?.numero || null, {
+    enabled: true,
+    interval: 5 * 60 * 1000, // 5 minutes
+    staleThreshold: 10, // 10 minutes
+    onUpdate: () => {
+      setShowUpdateIndicator(true);
+      setTimeout(() => setShowUpdateIndicator(false), 2000);
+    },
+  });
+
+  // Fetch data when station is selected (initial load)
   useEffect(() => {
     if (selectedStation) {
       pricingService.getCurrentPrices(selectedStation.numero);
@@ -65,7 +89,7 @@ export const CurrentPrices: React.FC = () => {
 
     setIsRefreshing(true);
     try {
-      await pricingService.refreshStationData(selectedStation.numero);
+      await pollManualRefresh();
     } finally {
       setIsRefreshing(false);
     }
@@ -123,6 +147,10 @@ export const CurrentPrices: React.FC = () => {
     ? getStationPrices(selectedStation.numero)
     : undefined;
   const filteredCompetitors = getFilteredCompetitors();
+
+  // Get stale data warning
+  const lastUpdatedTime = stationPrices?.[0]?.detected_at;
+  const { isStale, staleMessage } = useStaleDataWarning(lastUpdatedTime, 360); // 6 hours
 
   // Transform prices for display
   const priceCards = stationPrices
@@ -231,9 +259,9 @@ export const CurrentPrices: React.FC = () => {
             size="sm"
           >
             <RefreshCw
-              className={`h-4 w-4 mr-1 ${isRefreshing ? "animate-spin" : ""}`}
+              className={`h-4 w-4 mr-1 ${isRefreshing || isUpdating ? "animate-spin" : ""}`}
             />
-            Actualizar
+            {isUpdating ? "Actualizando..." : "Actualizar"}
           </Button>
           <Button
             onClick={handleExport}
@@ -246,6 +274,33 @@ export const CurrentPrices: React.FC = () => {
           </Button>
         </div>
       </div>
+
+      {/* Update Indicator */}
+      {(updateIndicator || showUpdateIndicator || isUpdating) && (
+        <div className="fixed top-4 right-4 z-50 animate-in fade-in slide-in-from-top-2">
+          <Card className="border-green-500 bg-green-50">
+            <CardContent className="flex items-center gap-2 p-3">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <span className="text-sm text-green-700">
+                Precios actualizados
+              </span>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Stale Data Warning */}
+      {isStale && (
+        <Card className="border-yellow-200 bg-yellow-50">
+          <CardContent className="flex items-center gap-2 pt-6">
+            <AlertCircle className="h-4 w-4 text-yellow-600 flex-shrink-0" />
+            <p className="text-sm text-yellow-700">
+              {staleMessage}. Los precios se actualizan automáticamente cada 5
+              minutos.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Error Messages */}
       {(pricesError || competitorsError) && (
