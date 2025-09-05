@@ -6,6 +6,7 @@ import { TrendChart } from '../../components/charts/TrendChart';
 import { ComparisonChart } from '../../components/charts/ComparisonChart';
 import { DateRangeSelector } from '../../components/features/analytics/DateRangeSelector';
 import { FuelTypeToggle } from '../../components/features/analytics/FuelTypeToggle';
+import { StatisticsPanel } from '../../components/features/analytics/StatisticsPanel';
 import { useUIStore } from '../../stores/uiStore';
 import type { ChartDataPoint, ComparisonDataPoint, FuelType } from '../../types/charts';
 
@@ -65,30 +66,6 @@ const generateComparisonData = (days: number): ComparisonDataPoint[] => {
   return data;
 };
 
-const calculateStatistics = (data: ChartDataPoint[], fuelType: FuelType) => {
-  const prices = data
-    .map(d => d[fuelType])
-    .filter((price): price is number => price !== undefined && price !== null);
-  
-  if (prices.length === 0) return null;
-  
-  const sum = prices.reduce((acc, price) => acc + price, 0);
-  const average = sum / prices.length;
-  const min = Math.min(...prices);
-  const max = Math.max(...prices);
-  
-  // Simple volatility calculation (standard deviation)
-  const squaredDiffs = prices.map(price => Math.pow(price - average, 2));
-  const variance = squaredDiffs.reduce((acc, diff) => acc + diff, 0) / prices.length;
-  const volatility = Math.sqrt(variance);
-  
-  return {
-    average: average.toFixed(2),
-    min: min.toFixed(2),
-    max: max.toFixed(2),
-    volatility: volatility.toFixed(2),
-  };
-};
 
 type ChartType = 'trends' | 'comparison';
 
@@ -173,11 +150,6 @@ export default function HistoricalTrends() {
     setSelectedFuels([]);
   };
 
-  const statistics = {
-    regular: calculateStatistics(chartData, 'regular'),
-    premium: calculateStatistics(chartData, 'premium'),
-    diesel: calculateStatistics(chartData, 'diesel'),
-  };
 
   return (
     <div className="space-y-6 p-6">
@@ -290,44 +262,12 @@ export default function HistoricalTrends() {
 
       {/* Statistics - Only show for trends view */}
       {chartType === 'trends' && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {selectedFuels.map((fuel) => {
-          const stats = statistics[fuel];
-          if (!stats) return null;
-          
-          const fuelLabel = fuel === 'regular' ? 'Magna' : fuel === 'premium' ? 'Premium' : 'Diésel';
-          
-          return (
-            <Card key={fuel} className="p-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-                {fuelLabel}
-              </h3>
-              
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Promedio:</span>
-                  <span className="font-medium">${stats.average}</span>
-                </div>
-                
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Mínimo:</span>
-                  <span className="font-medium text-green-600">${stats.min}</span>
-                </div>
-                
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Máximo:</span>
-                  <span className="font-medium text-red-600">${stats.max}</span>
-                </div>
-                
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Volatilidad:</span>
-                  <span className="font-medium">${stats.volatility}</span>
-                </div>
-              </div>
-            </Card>
-          );
-        })}
-        </div>
+        <StatisticsPanel
+          data={chartData}
+          selectedFuels={selectedFuels}
+          loading={loading}
+          variant="cards"
+        />
       )}
     </div>
   );
