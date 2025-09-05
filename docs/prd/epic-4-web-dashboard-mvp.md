@@ -1,6 +1,6 @@
 # Epic 4: Web Dashboard MVP
 
-**Goal:** Create a visually intuitive web dashboard that complements the Telegram bot with rich data visualizations and configuration capabilities. The mobile-first React application provides deeper analytics, visual trend analysis, and administrative functions that benefit from a larger screen format. This epic delivers the visual intelligence layer that transforms data into insights through charts, maps, and comparative visualizations.
+**Goal:** Create a visually intuitive web dashboard that complements the Telegram bot with rich data visualizations, configuration capabilities, and **multi-station management features**. The mobile-first React application provides deeper analytics, visual trend analysis, and administrative functions that benefit from a larger screen format. This epic delivers the visual intelligence layer that transforms data into insights through charts, maps, and comparative visualizations, with comprehensive support for users managing multiple fuel stations.
 
 ## Story 4.1: React Application Setup
 
@@ -91,3 +91,37 @@ so that I can access the dashboard conveniently.
 4: Responsive charts that remain readable on 320px screens
 5: Lighthouse score of 90+ for Performance, Accessibility, and Best Practices
 6: Offline mode shows cached data with clear "last updated" timestamps
+
+## Story 4.7: Station Management Interface
+
+As a multi-station owner,
+I want to search for and assign stations to my account through the dashboard,
+so that I can manage all my fuel station locations from one place.
+
+### Acceptance Criteria
+
+1: Station search interface with filters for name, location, and PEMEX/CRE number
+2: Search results show station details with "Add to My Stations" action
+3: My Stations page displays all assigned stations with role badges
+4: Station cards show key info: name, address, numero, role, assigned date
+5: Remove station functionality with confirmation dialog
+6: Role management UI for changing user permissions per station
+7: Station assignment state syncs with backend user_stations table
+8: Empty state with helpful instructions for users with no stations
+
+## Story 4.8: Dashboard Multi-Station Updates
+
+As a user with multiple stations,
+I want to switch between my stations and see station-specific data,
+so that I can monitor each location independently.
+
+### Acceptance Criteria
+
+1: Station switcher component in header shows current station and dropdown list
+2: Selected station persists across page navigation and browser sessions
+3: All dashboard widgets update to show data for selected station only
+4: No-station state displays when user hasn't selected or assigned any stations
+5: Station context provider manages selected station across all components
+6: Cache keys include station_numero to prevent data mixing between stations
+7: Quick switch keyboard shortcuts (Cmd/Ctrl + 1-9 for first 9 stations)
+8: Mobile-optimized station switcher with swipe gestures

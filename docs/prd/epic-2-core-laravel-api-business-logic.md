@@ -1,6 +1,6 @@
 # Epic 2: Core Laravel API & Business Logic
 
-**Goal:** Build the comprehensive Laravel REST API that serves as the backbone of FuelIntel, providing all pricing intelligence endpoints that both the Telegram bot and web dashboard will consume. This epic transforms raw price data into actionable insights through business logic for competitor analysis, historical trends, geographic filtering, and price calculations. Upon completion, any client can access full pricing intelligence via well-documented API endpoints.
+**Goal:** Build the comprehensive Laravel REST API that serves as the backbone of FuelIntel, providing all pricing intelligence endpoints that both the Telegram bot and web dashboard will consume. This epic transforms raw price data into actionable insights through business logic for competitor analysis, historical trends, geographic filtering, price calculations, and **multi-station management**. Upon completion, any client can access full pricing intelligence via well-documented API endpoints with support for users managing multiple fuel stations.
 
 ## Story 2.1: API Authentication & User Management
 
@@ -91,3 +91,20 @@ so that I can integrate efficiently with the FuelIntel platform.
 4: Rate limit headers (X-RateLimit-Limit, X-RateLimit-Remaining) included in all responses
 5: Comprehensive error messages with clear problem descriptions and solution hints
 6: API health dashboard showing endpoint status and response times
+
+## Story 2.7: Multi-Station Backend Support
+
+As a multi-station owner,
+I want to manage multiple fuel stations from my account,
+so that I can monitor and control all my locations from a single platform.
+
+### Acceptance Criteria
+
+1: User model supports many-to-many relationship with stations through user_stations pivot table
+2: POST /api/v1/stations/assign endpoint allows users to add existing stations to their account
+3: DELETE /api/v1/user-stations/{numero} endpoint removes station assignment from user
+4: Station roles implemented (owner, manager, viewer) with appropriate permissions
+5: All pricing, alert, and analytics endpoints filter data based on selected station_numero
+6: GET /api/v1/user/stations returns list of all stations assigned to authenticated user
+7: Station access validation middleware ensures users can only access their assigned stations
+8: Default station selection logic when user has multiple stations
