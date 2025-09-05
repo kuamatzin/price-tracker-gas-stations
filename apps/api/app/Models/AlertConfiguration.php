@@ -175,4 +175,58 @@ class AlertConfiguration extends Model
 
         $this->update(['conditions' => $conditions]);
     }
+
+    /**
+     * Scope a query to only include alerts for a specific station.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  string  $stationNumero
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeForStation($query, string $stationNumero)
+    {
+        return $query->where(function ($q) use ($stationNumero) {
+            $q->whereJsonContains('conditions->stations', $stationNumero)
+                ->orWhereJsonLength('conditions->stations', 0)
+                ->orWhereNull('conditions->stations');
+        });
+    }
+
+    /**
+     * Scope a query to only include alerts for multiple stations.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  array  $stationNumeros
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeForStations($query, array $stationNumeros)
+    {
+        return $query->where(function ($q) use ($stationNumeros) {
+            foreach ($stationNumeros as $numero) {
+                $q->orWhereJsonContains('conditions->stations', $numero);
+            }
+            $q->orWhereJsonLength('conditions->stations', 0)
+                ->orWhereNull('conditions->stations');
+        });
+    }
+
+    /**
+     * Scope a query to only include alerts for a specific user's stations.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  int|string  $userId
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeForUserStations($query, $userId)
+    {
+        $user = User::with('stations')->find($userId);
+        if (!$user) {
+            return $query->whereRaw('1 = 0'); // Return no results
+        }
+
+        $stationNumeros = $user->stations->pluck('numero')->toArray();
+        
+        return $query->where('user_id', $userId)
+            ->forStations($stationNumeros);
+    }
 }

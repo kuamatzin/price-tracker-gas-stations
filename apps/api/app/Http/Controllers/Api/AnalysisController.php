@@ -35,15 +35,21 @@ class AnalysisController extends BaseApiController
     public function ranking(Request $request): JsonResponse
     {
         $user = $request->user();
+        $stationNumero = $request->input('station_numero');
 
-        if (! $user->station_numero) {
-            return $this->errorResponse('User does not have an associated station', 400);
+        if (!$stationNumero) {
+            return $this->errorResponse('station_numero is required', 422);
         }
 
-        $cacheKey = "analysis:ranking:{$user->station_numero}:".date('Y-m-d-H');
+        // Verify user has access to this station
+        if (!$user->stations()->where('station_numero', $stationNumero)->exists()) {
+            return $this->errorResponse('Unauthorized access to station', 403);
+        }
 
-        $data = Cache::remember($cacheKey, 900, function () use ($user) {
-            $station = $this->competitorService->getUserStation($user->station_numero);
+        $cacheKey = "analysis:ranking:{$stationNumero}:".date('Y-m-d-H');
+
+        $data = Cache::remember($cacheKey, 900, function () use ($stationNumero) {
+            $station = $this->competitorService->getUserStation($stationNumero);
 
             if (! $station) {
                 return null;
@@ -72,15 +78,21 @@ class AnalysisController extends BaseApiController
     public function spread(Request $request): JsonResponse
     {
         $user = $request->user();
+        $stationNumero = $request->input('station_numero');
 
-        if (! $user->station_numero) {
-            return $this->errorResponse('User does not have an associated station', 400);
+        if (!$stationNumero) {
+            return $this->errorResponse('station_numero is required', 422);
         }
 
-        $cacheKey = "analysis:spread:{$user->station_numero}:".date('Y-m-d-H');
+        // Verify user has access to this station
+        if (!$user->stations()->where('station_numero', $stationNumero)->exists()) {
+            return $this->errorResponse('Unauthorized access to station', 403);
+        }
 
-        $data = Cache::remember($cacheKey, 900, function () use ($user) {
-            $station = $this->competitorService->getUserStation($user->station_numero);
+        $cacheKey = "analysis:spread:{$stationNumero}:".date('Y-m-d-H');
+
+        $data = Cache::remember($cacheKey, 900, function () use ($stationNumero) {
+            $station = $this->competitorService->getUserStation($stationNumero);
 
             if (! $station) {
                 return null;
@@ -106,15 +118,21 @@ class AnalysisController extends BaseApiController
     public function insights(Request $request): JsonResponse
     {
         $user = $request->user();
+        $stationNumero = $request->input('station_numero');
 
-        if (! $user->station_numero) {
-            return $this->errorResponse('User does not have an associated station', 400);
+        if (!$stationNumero) {
+            return $this->errorResponse('station_numero is required', 422);
         }
 
-        $cacheKey = "analysis:insights:{$user->station_numero}:".date('Y-m-d-H');
+        // Verify user has access to this station
+        if (!$user->stations()->where('station_numero', $stationNumero)->exists()) {
+            return $this->errorResponse('Unauthorized access to station', 403);
+        }
 
-        $data = Cache::remember($cacheKey, 900, function () use ($user) {
-            $station = $this->competitorService->getUserStation($user->station_numero);
+        $cacheKey = "analysis:insights:{$stationNumero}:".date('Y-m-d-H');
+
+        $data = Cache::remember($cacheKey, 900, function () use ($stationNumero) {
+            $station = $this->competitorService->getUserStation($stationNumero);
 
             if (! $station) {
                 return null;

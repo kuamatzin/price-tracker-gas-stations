@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Traits\HasStationScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class PriceChange extends Model
 {
-    use HasFactory;
+    use HasFactory, HasStationScope;
 
     public $timestamps = false;
 
@@ -29,5 +30,17 @@ class PriceChange extends Model
     public function station()
     {
         return $this->belongsTo(Station::class, 'station_numero', 'numero');
+    }
+
+    /**
+     * Scope a query to only include recent price changes.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  int  $days
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeRecent($query, int $days = 7)
+    {
+        return $query->where('changed_at', '>=', now()->subDays($days));
     }
 }
