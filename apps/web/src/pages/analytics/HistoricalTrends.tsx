@@ -3,10 +3,11 @@ import { RefreshCw, Download } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { TrendChart } from '../../components/charts/TrendChart';
+import { ComparisonChart } from '../../components/charts/ComparisonChart';
 import { DateRangeSelector } from '../../components/features/analytics/DateRangeSelector';
 import { FuelTypeToggle } from '../../components/features/analytics/FuelTypeToggle';
 import { useUIStore } from '../../stores/uiStore';
-import type { ChartDataPoint, FuelType } from '../../types/charts';
+import type { ChartDataPoint, ComparisonDataPoint, FuelType } from '../../types/charts';
 
 // Mock data for demonstration - in a real app this would come from API
 const generateMockData = (days: number): ChartDataPoint[] => {
@@ -24,6 +25,40 @@ const generateMockData = (days: number): ChartDataPoint[] => {
       regular: basePrice + Math.random() * 2 - 1,
       premium: basePrice + 2 + Math.random() * 2 - 1,
       diesel: basePrice - 1 + Math.random() * 2 - 1,
+    });
+  }
+  
+  return data;
+};
+
+// Generate comparison data with market averages
+const generateComparisonData = (days: number): ComparisonDataPoint[] => {
+  const data: ComparisonDataPoint[] = [];
+  const now = new Date();
+  
+  for (let i = days; i >= 0; i--) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - i);
+    
+    // User prices (simulated with some variation)
+    const basePrice = 20 + Math.random() * 5;
+    const userRegular = basePrice + Math.random() * 2 - 1;
+    const userPremium = basePrice + 2 + Math.random() * 2 - 1;
+    const userDiesel = basePrice - 1 + Math.random() * 2 - 1;
+    
+    // Market averages (typically slightly different from user prices)
+    const marketVariation = (Math.random() - 0.5) * 3; // -1.5 to +1.5 variation
+    
+    data.push({
+      date: date.toISOString(),
+      regular: userRegular,
+      premium: userPremium,
+      diesel: userDiesel,
+      marketAverage: {
+        regular: userRegular + marketVariation * 0.8,
+        premium: userPremium + marketVariation,
+        diesel: userDiesel + marketVariation * 0.9,
+      }
     });
   }
   
@@ -55,11 +90,16 @@ const calculateStatistics = (data: ChartDataPoint[], fuelType: FuelType) => {
   };
 };
 
+type ChartType = 'trends' | 'comparison';
+
 export default function HistoricalTrends() {
   const { activeFilters } = useUIStore();
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
+  const [comparisonData, setComparisonData] = useState<ComparisonDataPoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedFuels, setSelectedFuels] = useState<FuelType[]>(['regular', 'premium', 'diesel']);
+  const [chartType, setChartType] = useState<ChartType>('trends');
+  const [comparisonFuel, setComparisonFuel] = useState<FuelType>('regular');
 
   // Load data based on date range
   useEffect(() => {
@@ -74,8 +114,10 @@ export default function HistoricalTrends() {
       const toDate = activeFilters.dateRange.to ? new Date(activeFilters.dateRange.to) : new Date();
       const daysDiff = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24));
       
-      const data = generateMockData(daysDiff);
-      setChartData(data);
+      const trendData = generateMockData(daysDiff);
+      const compData = generateComparisonData(daysDiff);
+      setChartData(trendData);
+      setComparisonData(compData);
       setLoading(false);
     };
 
@@ -89,8 +131,10 @@ export default function HistoricalTrends() {
     
     setLoading(true);
     setTimeout(() => {
-      const data = generateMockData(daysDiff);
-      setChartData(data);
+      const trendData = generateMockData(daysDiff);
+      const compData = generateComparisonData(daysDiff);
+      setChartData(trendData);
+      setComparisonData(compData);
       setLoading(false);
     }, 500);
   };
@@ -166,35 +210,88 @@ export default function HistoricalTrends() {
         <div className="space-y-4">
           <div>
             <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+              Tipo de gráfico
+            </h3>
+            <div className="flex gap-2">
+              <Button
+                variant={chartType === 'trends' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setChartType('trends')}
+              >
+                Tendencias
+              </Button>
+              <Button
+                variant={chartType === 'comparison' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setChartType('comparison')}
+              >
+                Comparación vs Mercado
+              </Button>
+            </div>
+          </div>
+          
+          <div>
+            <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
               Rango de fechas
             </h3>
             <DateRangeSelector />
           </div>
           
-          <FuelTypeToggle
-            selectedFuels={selectedFuels}
-            onFuelToggle={toggleFuel}
-            onSelectAll={selectAllFuels}
-            onDeselectAll={deselectAllFuels}
-            variant="tabs"
-            showSelectAll={true}
-          />
+          {chartType === 'trends' ? (
+            <FuelTypeToggle
+              selectedFuels={selectedFuels}
+              onFuelToggle={toggleFuel}
+              onSelectAll={selectAllFuels}
+              onDeselectAll={deselectAllFuels}
+              variant="tabs"
+              showSelectAll={true}
+            />
+          ) : (
+            <div>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+                Combustible para comparar
+              </h3>
+              <div className="flex gap-2">
+                {(['regular', 'premium', 'diesel'] as FuelType[]).map((fuel) => (
+                  <Button
+                    key={fuel}
+                    variant={comparisonFuel === fuel ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setComparisonFuel(fuel)}
+                  >
+                    {fuel === 'regular' ? 'Magna' : fuel === 'premium' ? 'Premium' : 'Diésel'}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </Card>
 
       {/* Chart */}
       <Card className="p-4">
-        <TrendChart
-          data={chartData}
-          loading={loading}
-          selectedFuels={selectedFuels}
-          showZoomControls={true}
-        />
+        {chartType === 'trends' ? (
+          <TrendChart
+            data={chartData}
+            loading={loading}
+            selectedFuels={selectedFuels}
+            showZoomControls={true}
+          />
+        ) : (
+          <ComparisonChart
+            data={comparisonData}
+            loading={loading}
+            selectedFuel={comparisonFuel}
+            showPercentageDifference={true}
+            showMarketPositionIndicators={true}
+          />
+        )}
       </Card>
 
-      {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {selectedFuels.map((fuel) => {
+      {/* Statistics - Only show for trends view */}
+      {chartType === 'trends' && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {selectedFuels.map((fuel) => {
           const stats = statistics[fuel];
           if (!stats) return null;
           
@@ -230,7 +327,8 @@ export default function HistoricalTrends() {
             </Card>
           );
         })}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
