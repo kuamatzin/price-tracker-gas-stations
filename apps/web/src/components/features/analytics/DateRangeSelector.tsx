@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { Card } from '../../ui/card';
-import { useUIStore } from '../../../stores/uiStore';
+import { useAnalyticsStore } from '../../../stores/analyticsStore';
 import { formatDate, startOfDay, endOfDay, addDays, subtractDays } from '../../../../../packages/shared/src/utils/date';
 
 interface DateRangeSelectorProps {
@@ -40,7 +40,7 @@ export function DateRangeSelector({
   className = '',
   showCustomPicker = true,
 }: DateRangeSelectorProps) {
-  const { activeFilters, setFilters } = useUIStore();
+  const { selectedDateRange, setDateRange } = useAnalyticsStore();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempFromDate, setTempFromDate] = useState('');
   const [tempToDate, setTempToDate] = useState('');
@@ -50,20 +50,18 @@ export function DateRangeSelector({
     const presetConfig = DATE_PRESETS[preset];
     const dates = presetConfig.getDates();
     
-    setFilters({
-      dateRange: dates,
+    setDateRange({
+      start: new Date(dates.from),
+      end: new Date(dates.to),
     });
-  }, [setFilters]);
+  }, [setDateRange]);
 
   const getCurrentDateRange = useCallback(() => {
-    if (!activeFilters.dateRange.from || !activeFilters.dateRange.to) {
-      // Default to 7 days if no range set
-      const defaultRange = DATE_PRESETS['7d'].getDates();
-      setFilters({ dateRange: defaultRange });
-      return defaultRange;
-    }
-    return activeFilters.dateRange;
-  }, [activeFilters.dateRange, setFilters]);
+    return {
+      from: formatDate(selectedDateRange.start, 'short'),
+      to: formatDate(selectedDateRange.end, 'short'),
+    };
+  }, [selectedDateRange]);
 
   const handlePreviousPeriod = useCallback(() => {
     const currentRange = getCurrentDateRange();
@@ -77,11 +75,9 @@ export function DateRangeSelector({
     const newFromDate = subtractDays(fromDate, daysDiff);
     const newToDate = subtractDays(toDate, daysDiff);
     
-    setFilters({
-      dateRange: {
-        from: formatDate(newFromDate, 'short'),
-        to: formatDate(newToDate, 'short'),
-      },
+    setDateRange({
+      start: newFromDate,
+      end: newToDate,
     });
   }, [getCurrentDateRange, setFilters]);
 
@@ -102,11 +98,9 @@ export function DateRangeSelector({
       return;
     }
     
-    setFilters({
-      dateRange: {
-        from: formatDate(newFromDate, 'short'),
-        to: formatDate(newToDate, 'short'),
-      },
+    setDateRange({
+      start: newFromDate,
+      end: newToDate,
     });
   }, [getCurrentDateRange, setFilters]);
 
@@ -149,16 +143,14 @@ export function DateRangeSelector({
     const fromDate = startOfDay(new Date(tempFromDate));
     const toDate = endOfDay(new Date(tempToDate));
     
-    setFilters({
-      dateRange: {
-        from: formatDate(fromDate, 'short'),
-        to: formatDate(toDate, 'short'),
-      },
+    setDateRange({
+      start: fromDate,
+      end: toDate,
     });
     
     setShowDatePicker(false);
     setValidationError('');
-  }, [tempFromDate, tempToDate, validateDateRange, setFilters]);
+  }, [tempFromDate, tempToDate, validateDateRange, setDateRange]);
 
   const handleShowCustomPicker = useCallback(() => {
     const currentRange = getCurrentDateRange();

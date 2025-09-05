@@ -7,7 +7,7 @@ import { ComparisonChart } from '../../components/charts/ComparisonChart';
 import { DateRangeSelector } from '../../components/features/analytics/DateRangeSelector';
 import { FuelTypeToggle } from '../../components/features/analytics/FuelTypeToggle';
 import { StatisticsPanel } from '../../components/features/analytics/StatisticsPanel';
-import { useUIStore } from '../../stores/uiStore';
+import { useAnalyticsStore } from '../../stores/analyticsStore';
 import type { ChartDataPoint, ComparisonDataPoint, FuelType } from '../../types/charts';
 
 // Mock data for demonstration - in a real app this would come from API
@@ -70,56 +70,60 @@ const generateComparisonData = (days: number): ComparisonDataPoint[] => {
 type ChartType = 'trends' | 'comparison';
 
 export default function HistoricalTrends() {
-  const { activeFilters } = useUIStore();
-  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
+  const {
+    historicalData,
+    selectedFuels,
+    selectedDateRange,
+    isLoading,
+    error,
+    fetchDataForRange,
+    toggleFuel,
+    selectAllFuels,
+    deselectAllFuels,
+    setDateRange,
+    getFilteredData
+  } = useAnalyticsStore();
+  
   const [comparisonData, setComparisonData] = useState<ComparisonDataPoint[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [selectedFuels, setSelectedFuels] = useState<FuelType[]>(['regular', 'premium', 'diesel']);
   const [chartType, setChartType] = useState<ChartType>('trends');
   const [comparisonFuel, setComparisonFuel] = useState<FuelType>('regular');
 
   // Load data based on date range
   useEffect(() => {
     const loadData = async () => {
-      setLoading(true);
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Calculate days from date range
-      const fromDate = activeFilters.dateRange.from ? new Date(activeFilters.dateRange.from) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      const toDate = activeFilters.dateRange.to ? new Date(activeFilters.dateRange.to) : new Date();
-      const daysDiff = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24));
-      
-      const trendData = generateMockData(daysDiff);
-      const compData = generateComparisonData(daysDiff);
-      setChartData(trendData);
-      setComparisonData(compData);
-      setLoading(false);
+      try {
+        await fetchDataForRange(selectedDateRange);
+        
+        // Generate comparison data based on historical data
+        const daysDiff = Math.ceil((selectedDateRange.end.getTime() - selectedDateRange.start.getTime()) / (1000 * 60 * 60 * 24));
+        const compData = generateComparisonData(daysDiff);
+        setComparisonData(compData);
+      } catch (err) {
+        console.error('Failed to load data:', err);
+      }
     };
 
     loadData();
-  }, [activeFilters.dateRange]);
+  }, [selectedDateRange, fetchDataForRange]);
 
-  const handleRefresh = () => {
-    const fromDate = activeFilters.dateRange.from ? new Date(activeFilters.dateRange.from) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const toDate = activeFilters.dateRange.to ? new Date(activeFilters.dateRange.to) : new Date();
-    const daysDiff = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 1000 * 24));
-    
-    setLoading(true);
-    setTimeout(() => {
-      const trendData = generateMockData(daysDiff);
+  const handleRefresh = async () => {
+    try {
+      await fetchDataForRange(selectedDateRange);
+      
+      // Refresh comparison data too
+      const daysDiff = Math.ceil((selectedDateRange.end.getTime() - selectedDateRange.start.getTime()) / (1000 * 60 * 60 * 24));
       const compData = generateComparisonData(daysDiff);
-      setChartData(trendData);
       setComparisonData(compData);
-      setLoading(false);
-    }, 500);
+    } catch (err) {
+      console.error('Failed to refresh data:', err);
+    }
   };
 
   const handleExport = () => {
+    const filteredData = getFilteredData();
     const csvContent = [
       ['Fecha', 'Magna', 'Premium', 'Diesel'],
-      ...chartData.map(item => [
+      ...filteredData.map(item => [
         new Date(item.date).toLocaleDateString('es-MX'),
         item.regular?.toFixed(2) || '',
         item.premium?.toFixed(2) || '',
@@ -134,21 +138,7 @@ export default function HistoricalTrends() {
     link.click();
   };
 
-  const toggleFuel = (fuel: FuelType) => {
-    setSelectedFuels(prev => 
-      prev.includes(fuel) 
-        ? prev.filter(f => f !== fuel)
-        : [...prev, fuel]
-    );
-  };
-
-  const selectAllFuels = () => {
-    setSelectedFuels(['regular', 'premium', 'diesel']);
-  };
-
-  const deselectAllFuels = () => {
-    setSelectedFuels([]);
-  };
+  // Fuel toggle functions are now handled by the store
 
 
   return (
@@ -165,12 +155,12 @@ export default function HistoricalTrends() {
         </div>
         
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Actualizar
           </Button>
           
-          <Button variant="outline" size="sm" onClick={handleExport} disabled={!chartData.length}>
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={!historicalData.length}>
             <Download className="w-4 h-4 mr-2" />
             Exportar CSV
           </Button>
@@ -242,17 +232,22 @@ export default function HistoricalTrends() {
 
       {/* Chart */}
       <Card className="p-4">
+        {error && (
+          <div className="text-red-600 dark:text-red-400 p-4 text-center">
+            Error: {error}
+          </div>
+        )}
         {chartType === 'trends' ? (
           <TrendChart
-            data={chartData}
-            loading={loading}
+            data={historicalData}
+            loading={isLoading}
             selectedFuels={selectedFuels}
             showZoomControls={true}
           />
         ) : (
           <ComparisonChart
             data={comparisonData}
-            loading={loading}
+            loading={isLoading}
             selectedFuel={comparisonFuel}
             showPercentageDifference={true}
             showMarketPositionIndicators={true}
@@ -263,9 +258,9 @@ export default function HistoricalTrends() {
       {/* Statistics - Only show for trends view */}
       {chartType === 'trends' && (
         <StatisticsPanel
-          data={chartData}
+          data={historicalData}
           selectedFuels={selectedFuels}
-          loading={loading}
+          loading={isLoading}
           variant="cards"
         />
       )}
