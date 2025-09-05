@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\StationSearchResource;
+use App\Http\Resources\UserStationCollection;
+use App\Http\Resources\UserStationResource;
 use App\Models\Station;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,26 +16,21 @@ class UserStationController extends Controller
     /**
      * Get the authenticated user's stations.
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $stations = Auth::user()->stations()->with(['municipio.entidad'])->get();
+        $query = Auth::user()->stations()->with(['municipio.entidad']);
         
-        return response()->json([
-            'data' => $stations->map(function ($station) {
-                return [
-                    'numero' => $station->numero,
-                    'nombre' => $station->nombre,
-                    'direccion' => $station->direccion,
-                    'municipio' => $station->municipio?->nombre,
-                    'entidad' => $station->municipio?->entidad?->nombre,
-                    'lat' => $station->lat,
-                    'lng' => $station->lng,
-                    'brand' => $station->brand,
-                    'role' => $station->pivot->role,
-                    'assigned_at' => $station->pivot->created_at,
-                ];
-            }),
-        ]);
+        // Optionally include statistics
+        if ($request->boolean('include_stats')) {
+            $query->withCount('priceChanges')
+                  ->with('latestPriceChange');
+        }
+        
+        $stations = $query->get();
+        
+        return (new UserStationCollection($stations))
+            ->response()
+            ->setStatusCode(200);
     }
     
     /**
@@ -62,20 +60,15 @@ class UserStationController extends Controller
         
         $station = Station::with(['municipio.entidad'])->find($validated['station_numero']);
         
+        // Manually set the pivot data for the resource
+        $station->pivot = (object) [
+            'role' => $role,
+            'created_at' => now(),
+        ];
+        
         return response()->json([
             'message' => 'Station assigned successfully',
-            'data' => [
-                'numero' => $station->numero,
-                'nombre' => $station->nombre,
-                'direccion' => $station->direccion,
-                'municipio' => $station->municipio?->nombre,
-                'entidad' => $station->municipio?->entidad?->nombre,
-                'lat' => $station->lat,
-                'lng' => $station->lng,
-                'brand' => $station->brand,
-                'role' => $role,
-                'assigned_at' => now(),
-            ],
+            'data' => new UserStationResource($station),
         ], 201);
     }
     
@@ -139,26 +132,16 @@ class UserStationController extends Controller
         $perPage = $validated['per_page'] ?? 20;
         $stations = $query->paginate($perPage);
         
-        return response()->json([
-            'data' => $stations->map(function ($station) {
-                return [
-                    'numero' => $station->numero,
-                    'nombre' => $station->nombre,
-                    'direccion' => $station->direccion,
-                    'municipio' => $station->municipio?->nombre,
-                    'entidad' => $station->municipio?->entidad?->nombre,
-                    'lat' => $station->lat,
-                    'lng' => $station->lng,
-                    'brand' => $station->brand,
-                    'is_available' => true,
-                ];
-            }),
-            'meta' => [
-                'total' => $stations->total(),
-                'per_page' => $stations->perPage(),
-                'current_page' => $stations->currentPage(),
-                'last_page' => $stations->lastPage(),
-            ],
-        ]);
+        return StationSearchResource::collection($stations)
+            ->additional([
+                'meta' => [
+                    'available_count' => $stations->total(),
+                    'filters_applied' => array_filter([
+                        'search' => $validated['q'] ?? null,
+                        'entidad_id' => $validated['entidad_id'] ?? null,
+                        'municipio_id' => $validated['municipio_id'] ?? null,
+                    ]),
+                ],
+            ]);
     }
 }

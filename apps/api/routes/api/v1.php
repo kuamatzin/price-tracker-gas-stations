@@ -55,9 +55,9 @@ Route::prefix('v1')->middleware('api.version:v1')->group(function () {
         
         // User Station Management
         Route::prefix('user/stations')->group(function () {
-            Route::get('/', [UserStationController::class, 'index']);
-            Route::post('/', [UserStationController::class, 'store']);
-            Route::delete('/{numero}', [UserStationController::class, 'destroy']);
+            Route::get('/', [UserStationController::class, 'index'])->name('api.v1.user.stations.index');
+            Route::post('/', [UserStationController::class, 'store'])->name('api.v1.user.stations.store');
+            Route::delete('/{numero}', [UserStationController::class, 'destroy'])->name('api.v1.user.stations.destroy');
         });
         
         // Station Search (available stations)
