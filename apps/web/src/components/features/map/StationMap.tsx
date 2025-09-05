@@ -3,6 +3,8 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { FuelType } from "@fuelintel/shared";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Navigation } from "lucide-react";
 import "leaflet/dist/leaflet.css";
 
 // Fix for default marker icons in React-Leaflet
@@ -41,6 +43,11 @@ const MAP_CONFIG = {
   minZoom: 10,
   tileUrl: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
   attribution: "© OpenStreetMap contributors",
+  // Mobile optimizations
+  zoomControl: false,
+  tapTolerance: 10,
+  touchZoom: true,
+  dragging: true,
 };
 
 // Custom map component to handle re-centering
@@ -259,9 +266,11 @@ export const StationMap: React.FC<StationMapProps> = ({
           })}
         </MapContainer>
 
-        {/* Legend */}
-        <div className="absolute bottom-4 right-4 bg-white p-3 rounded-lg shadow-md z-[1000]">
-          <p className="text-xs font-medium mb-2">Leyenda de precios</p>
+        {/* Mobile-friendly Legend */}
+        <div className="absolute bottom-4 left-4 md:left-auto md:right-4 bg-white p-2 md:p-3 rounded-lg shadow-md z-[1000] max-w-[140px] md:max-w-none">
+          <p className="text-xs font-medium mb-2 hidden md:block">
+            Leyenda de precios
+          </p>
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
@@ -280,6 +289,25 @@ export const StationMap: React.FC<StationMapProps> = ({
               <span className="text-xs">Tu estación</span>
             </div>
           </div>
+        </div>
+
+        {/* Mobile Center Button */}
+        <div className="absolute bottom-4 right-4 md:hidden">
+          <Button
+            size="sm"
+            variant="secondary"
+            className="rounded-full shadow-lg h-10 w-10 p-0"
+            onClick={() => {
+              if (mapRef.current) {
+                mapRef.current.setView(
+                  [selectedStation.lat, selectedStation.lng],
+                  MAP_CONFIG.zoom,
+                );
+              }
+            }}
+          >
+            <Navigation className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </Card>

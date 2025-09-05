@@ -4,8 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PriceCard } from "@/components/features/pricing/PriceCard";
 import { CompetitorTable } from "@/components/features/competitors/CompetitorTable";
+import { CompetitorCard } from "@/components/features/competitors/CompetitorCard";
 import { StationMap } from "@/components/features/map/StationMap";
 import { PriceFilters } from "@/components/features/filters/PriceFilters";
+import { MobileFilterSheet } from "@/components/features/filters/MobileFilterSheet";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { usePricingStore } from "@/stores/pricingStore";
 import { pricingService } from "@/services/pricing.service";
 import { exportToCSV, prepareCompetitorData } from "@/utils/csvExport";
@@ -66,6 +69,14 @@ export const CurrentPrices: React.FC = () => {
       setIsRefreshing(false);
     }
   };
+
+  // Pull to refresh for mobile
+  const { containerRef, isPulling, getTransformStyle, getIndicatorStyle } =
+    usePullToRefresh({
+      onRefresh: handleRefresh,
+      threshold: 80,
+      disabled: !selectedStation,
+    });
 
   const handleExport = () => {
     setIsExporting(true);
@@ -183,7 +194,20 @@ export const CurrentPrices: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto p-4 space-y-4">
+    <div
+      ref={containerRef}
+      className="container mx-auto p-4 space-y-4"
+      style={getTransformStyle()}
+    >
+      {/* Pull to refresh indicator */}
+      {isPulling && (
+        <div
+          className="absolute top-0 left-0 right-0 flex justify-center py-2 md:hidden"
+          style={getIndicatorStyle()}
+        >
+          <RefreshCw className="h-6 w-6 text-blue-500" />
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -243,8 +267,8 @@ export const CurrentPrices: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        {/* Filters */}
-        <div className="lg:col-span-1">
+        {/* Desktop Filters */}
+        <div className="hidden lg:block lg:col-span-1">
           <PriceFilters
             className="sticky top-4"
             onFiltersChange={handleRefresh}
@@ -271,20 +295,41 @@ export const CurrentPrices: React.FC = () => {
                 </TabsList>
 
                 <TabsContent value="table" className="mt-4">
-                  <CompetitorTable
-                    selectedStation={{
-                      lat: selectedStation.lat,
-                      lng: selectedStation.lng,
-                      numero: selectedStation.numero,
-                      prices: {
-                        regular: priceCards[0]?.currentPrice,
-                        premium: priceCards[1]?.currentPrice,
-                        diesel: priceCards[2]?.currentPrice,
-                      },
-                    }}
-                    competitors={filteredCompetitors}
-                    isLoading={isLoadingCompetitors}
-                  />
+                  {/* Desktop Table */}
+                  <div className="hidden md:block">
+                    <CompetitorTable
+                      selectedStation={{
+                        lat: selectedStation.lat,
+                        lng: selectedStation.lng,
+                        numero: selectedStation.numero,
+                        prices: {
+                          regular: priceCards[0]?.currentPrice,
+                          premium: priceCards[1]?.currentPrice,
+                          diesel: priceCards[2]?.currentPrice,
+                        },
+                      }}
+                      competitors={filteredCompetitors}
+                      isLoading={isLoadingCompetitors}
+                    />
+                  </div>
+
+                  {/* Mobile Cards */}
+                  <div className="md:hidden space-y-3">
+                    {filteredCompetitors.map((competitor) => (
+                      <CompetitorCard
+                        key={competitor.numero}
+                        station={competitor}
+                        selectedStation={{
+                          prices: {
+                            regular: priceCards[0]?.currentPrice,
+                            premium: priceCards[1]?.currentPrice,
+                            diesel: priceCards[2]?.currentPrice,
+                          },
+                        }}
+                        onCardClick={() => handleStationClick(competitor)}
+                      />
+                    ))}
+                  </div>
                 </TabsContent>
 
                 <TabsContent value="map" className="mt-4">
@@ -319,6 +364,9 @@ export const CurrentPrices: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      {/* Mobile Filter Sheet */}
+      <MobileFilterSheet onFiltersApplied={handleRefresh} />
     </div>
   );
 };
