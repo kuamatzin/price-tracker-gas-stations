@@ -15,6 +15,7 @@ import {
   ChevronDownIcon,
   CaretSortIcon,
 } from "@radix-ui/react-icons";
+import { calculateCompetitiveness } from "@/utils/priceComparison";
 
 interface CompetitorStation {
   numero: string;
@@ -161,12 +162,20 @@ export const CompetitorTable: React.FC<CompetitorTableProps> = ({
   ) => {
     if (!competitorPrice || !selectedPrice) return "";
 
-    const percentDiff =
-      ((competitorPrice - selectedPrice) / selectedPrice) * 100;
+    const competitiveness = calculateCompetitiveness(
+      competitorPrice,
+      selectedPrice,
+      2,
+    );
 
-    if (percentDiff < -2) return "text-green-600 font-medium";
-    if (percentDiff > 2) return "text-red-600 font-medium";
-    return "text-yellow-600";
+    switch (competitiveness) {
+      case "competitive":
+        return "text-green-600 font-medium";
+      case "expensive":
+        return "text-red-600 font-medium";
+      default:
+        return "text-yellow-600";
+    }
   };
 
   const getPriceIndicator = (

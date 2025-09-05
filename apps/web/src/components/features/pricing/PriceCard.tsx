@@ -3,6 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowUpIcon, ArrowDownIcon, MinusIcon } from "@radix-ui/react-icons";
 import { FuelType } from "@fuelintel/shared";
 import { cn } from "@/lib/utils";
+import {
+  calculateCompetitiveness,
+  calculatePriceTrend,
+} from "@/utils/priceComparison";
 
 interface PriceCardProps {
   station_numero: string;
@@ -37,22 +41,37 @@ export const PriceCard: React.FC<PriceCardProps> = ({
 
   const priceCompetitiveness = useMemo(() => {
     if (!marketAverage) return "average";
-    const percentDiff = ((currentPrice - marketAverage) / marketAverage) * 100;
-    if (percentDiff < -2) return "competitive";
-    if (percentDiff > 2) return "expensive";
-    return "average";
+    return calculateCompetitiveness(currentPrice, marketAverage, 2);
   }, [currentPrice, marketAverage]);
 
+  const priceTrend = useMemo(() => {
+    return calculatePriceTrend(currentPrice, previousPrice);
+  }, [currentPrice, previousPrice]);
+
   const getTrendIcon = () => {
-    if (!priceChange) return <MinusIcon className="h-4 w-4" />;
-    if (priceChange > 0) return <ArrowUpIcon className="h-4 w-4" />;
-    if (priceChange < 0) return <ArrowDownIcon className="h-4 w-4" />;
-    return <MinusIcon className="h-4 w-4" />;
+    switch (priceTrend) {
+      case "up":
+        return <ArrowUpIcon className="h-4 w-4" />;
+      case "down":
+        return <ArrowDownIcon className="h-4 w-4" />;
+      case "stable":
+      case "unknown":
+      default:
+        return <MinusIcon className="h-4 w-4" />;
+    }
   };
 
   const getTrendColor = () => {
-    if (!priceChange) return "text-gray-500";
-    return priceChange > 0 ? "text-red-500" : "text-green-500";
+    switch (priceTrend) {
+      case "up":
+        return "text-red-500";
+      case "down":
+        return "text-green-500";
+      case "stable":
+      case "unknown":
+      default:
+        return "text-gray-500";
+    }
   };
 
   const getCompetitivenessStyles = () => {

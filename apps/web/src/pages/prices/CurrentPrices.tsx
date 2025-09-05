@@ -15,6 +15,7 @@ import { exportToCSV, prepareCompetitorData } from "@/utils/csvExport";
 import { FuelType } from "@fuelintel/shared";
 import { RefreshCw, Download, MapPin, Table2 } from "lucide-react";
 import { useAuthStore } from "@/stores/authStore";
+import { calculateAveragePrice } from "@/utils/priceComparison";
 
 export const CurrentPrices: React.FC = () => {
   const [activeTab, setActiveTab] = useState("table");
@@ -165,17 +166,23 @@ export const CurrentPrices: React.FC = () => {
       ]
     : [];
 
-  // Calculate market averages
+  // Calculate market averages using utility function
   const marketAverages = {
-    [FuelType.REGULAR]:
-      filteredCompetitors.reduce((sum, c) => sum + (c.prices.regular || 0), 0) /
-        filteredCompetitors.filter((c) => c.prices.regular).length || 0,
-    [FuelType.PREMIUM]:
-      filteredCompetitors.reduce((sum, c) => sum + (c.prices.premium || 0), 0) /
-        filteredCompetitors.filter((c) => c.prices.premium).length || 0,
-    [FuelType.DIESEL]:
-      filteredCompetitors.reduce((sum, c) => sum + (c.prices.diesel || 0), 0) /
-        filteredCompetitors.filter((c) => c.prices.diesel).length || 0,
+    [FuelType.REGULAR]: calculateAveragePrice(
+      filteredCompetitors
+        .map((c) => c.prices.regular)
+        .filter((price): price is number => price !== undefined && price > 0),
+    ),
+    [FuelType.PREMIUM]: calculateAveragePrice(
+      filteredCompetitors
+        .map((c) => c.prices.premium)
+        .filter((price): price is number => price !== undefined && price > 0),
+    ),
+    [FuelType.DIESEL]: calculateAveragePrice(
+      filteredCompetitors
+        .map((c) => c.prices.diesel)
+        .filter((price): price is number => price !== undefined && price > 0),
+    ),
   };
 
   if (!selectedStation) {

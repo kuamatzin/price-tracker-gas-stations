@@ -6,6 +6,10 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Navigation } from "lucide-react";
 import "leaflet/dist/leaflet.css";
+import {
+  calculateCompetitiveness,
+  getPriceColor,
+} from "@/utils/priceComparison";
 
 // Fix for default marker icons in React-Leaflet
 delete (L.Icon.Default.prototype as Record<string, unknown>)._getIconUrl;
@@ -94,26 +98,16 @@ const getPriceCompetitiveness = (
 ): "competitive" | "average" | "expensive" | "unknown" => {
   if (!stationPrice || !selectedPrice) return "unknown";
 
-  const percentDiff = ((stationPrice - selectedPrice) / selectedPrice) * 100;
-
-  if (percentDiff < -2) return "competitive";
-  if (percentDiff > 2) return "expensive";
-  return "average";
+  return calculateCompetitiveness(stationPrice, selectedPrice, 2);
 };
 
 const getMarkerColor = (
   competitiveness: "competitive" | "average" | "expensive" | "unknown",
 ): string => {
-  switch (competitiveness) {
-    case "competitive":
-      return "#10b981"; // green
-    case "expensive":
-      return "#ef4444"; // red
-    case "average":
-      return "#f59e0b"; // yellow
-    default:
-      return "#9ca3af"; // gray
+  if (competitiveness === "unknown") {
+    return "#9ca3af"; // gray
   }
+  return getPriceColor(competitiveness);
 };
 
 export const StationMap: React.FC<StationMapProps> = ({
