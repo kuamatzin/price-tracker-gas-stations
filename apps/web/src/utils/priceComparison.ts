@@ -1,258 +1,355 @@
-import { FuelType } from "@fuelintel/shared";
+import type { FuelType } from '@/stores/pricingStore';
 
-interface CompetitorPrice {
-  numero: string;
-  nombre: string;
-  brand?: string;
-  distance?: number;
-  prices: {
-    [key in FuelType]?: number;
-  };
-}
+export type CompetitivenessLevel = 'competitive' | 'average' | 'expensive';
+export type TrendDirection = 'up' | 'down' | 'stable';
 
-interface PriceComparisonResult {
-  competitiveness: "competitive" | "average" | "expensive";
-  percentile: number;
-  ranking: number;
-  totalCompetitors: number;
-  bestPrice: number;
-  worstPrice: number;
-  averagePrice: number;
-  priceDifference: number;
+export interface PriceCompetitivenessResult {
+  level: CompetitivenessLevel;
   percentageDifference: number;
+  absoluteDifference: number;
+  isSignificant: boolean;
+  rank?: number;
+  percentile?: number;
 }
+
+export interface PriceTrendResult {
+  direction: TrendDirection;
+  change: number;
+  changePercentage: number;
+  isSignificant: boolean;
+}
+
+export interface MarketPosition {
+  rank: number;
+  percentile: number;
+  totalStations: number;
+  betterThan: number;
+  worseThan: number;
+}
+
+export interface PriceRanking {
+  cheapest: { price: number; stationId: string };
+  mostExpensive: { price: number; stationId: string };
+  median: number;
+  average: number;
+  standardDeviation: number;
+  priceRange: number;
+}
+
+export interface CompetitivenessThresholds {
+  competitive: number;  // Below market average minus this percentage
+  expensive: number;    // Above market average plus this percentage
+  significantChange: number; // Minimum percentage change to be considered significant
+}
+
+// Default thresholds based on story requirements
+export const DEFAULT_THRESHOLDS: CompetitivenessThresholds = {
+  competitive: 2, // Price < Market Average - 2%
+  expensive: 2,   // Price > Market Average + 2%
+  significantChange: 0.5, // 0.5% minimum change to be significant
+};
 
 /**
- * Calculate price competitiveness based on thresholds
+ * Calculate price competitiveness compared to market average
  */
-export const calculateCompetitiveness = (
+export const calculatePriceCompetitiveness = (
   price: number,
   marketAverage: number,
-  thresholdPercentage: number = 2,
-): "competitive" | "average" | "expensive" => {
-  const percentDiff = ((price - marketAverage) / marketAverage) * 100;
+  thresholds: CompetitivenessThresholds = DEFAULT_THRESHOLDS
+): PriceCompetitivenessResult => {
+  if (price <= 0 || marketAverage <= 0) {
+    return {
+      level: 'average',
+      percentageDifference: 0,
+      absoluteDifference: 0,
+      isSignificant: false,
+    };
+  }
 
-  if (percentDiff < -thresholdPercentage) return "competitive";
-  if (percentDiff > thresholdPercentage) return "expensive";
-  return "average";
-};
+  const absoluteDifference = price - marketAverage;
+  const percentageDifference = (absoluteDifference / marketAverage) * 100;
 
-/**
- * Calculate market position percentile (0 = cheapest, 100 = most expensive)
- */
-export const calculateMarketPercentile = (
-  price: number,
-  competitorPrices: number[],
-): number => {
-  if (competitorPrices.length === 0) return 50;
+  let level: CompetitivenessLevel = 'average';
+  
+  if (percentageDifference < -thresholds.competitive) {
+    level = 'competitive';
+  } else if (percentageDifference > thresholds.expensive) {
+    level = 'expensive';
+  }
 
-  const sortedPrices = [...competitorPrices].sort((a, b) => a - b);
-  const position = sortedPrices.findIndex((p) => p >= price);
-
-  if (position === -1) return 100; // Most expensive
-  if (position === 0) return 0; // Cheapest
-
-  return Math.round((position / competitorPrices.length) * 100);
-};
-
-/**
- * Get price ranking (1 = best/cheapest)
- */
-export const calculatePriceRanking = (
-  price: number,
-  competitorPrices: number[],
-): number => {
-  const allPrices = [price, ...competitorPrices].sort((a, b) => a - b);
-  return allPrices.indexOf(price) + 1;
-};
-
-/**
- * Find best and worst prices among competitors
- */
-export const findBestWorstPrices = (
-  prices: number[],
-): { best: number; worst: number } => {
-  if (prices.length === 0) return { best: 0, worst: 0 };
+  const isSignificant = Math.abs(percentageDifference) >= thresholds.significantChange;
 
   return {
-    best: Math.min(...prices),
-    worst: Math.max(...prices),
+    level,
+    percentageDifference,
+    absoluteDifference,
+    isSignificant,
   };
 };
 
 /**
- * Calculate average price from array
- */
-export const calculateAveragePrice = (prices: number[]): number => {
-  if (prices.length === 0) return 0;
-  const sum = prices.reduce((acc, price) => acc + price, 0);
-  return sum / prices.length;
-};
-
-/**
- * Main comparison function for a station's price against competitors
- */
-export const compareStationPrice = (
-  stationPrice: number,
-  fuelType: FuelType,
-  competitors: CompetitorPrice[],
-): PriceComparisonResult => {
-  // Extract competitor prices for the fuel type
-  const competitorPrices = competitors
-    .map((c) => c.prices[fuelType])
-    .filter((price): price is number => price !== undefined && price > 0);
-
-  const averagePrice = calculateAveragePrice(competitorPrices);
-  const { best, worst } = findBestWorstPrices(competitorPrices);
-  const percentile = calculateMarketPercentile(stationPrice, competitorPrices);
-  const ranking = calculatePriceRanking(stationPrice, competitorPrices);
-  const competitiveness = calculateCompetitiveness(stationPrice, averagePrice);
-
-  return {
-    competitiveness,
-    percentile,
-    ranking,
-    totalCompetitors: competitorPrices.length,
-    bestPrice: best,
-    worstPrice: worst,
-    averagePrice,
-    priceDifference: stationPrice - averagePrice,
-    percentageDifference:
-      averagePrice > 0
-        ? ((stationPrice - averagePrice) / averagePrice) * 100
-        : 0,
-  };
-};
-
-/**
- * Get competitors sorted by price for a specific fuel type
- */
-export const getSortedCompetitorsByPrice = (
-  competitors: CompetitorPrice[],
-  fuelType: FuelType,
-  ascending: boolean = true,
-): CompetitorPrice[] => {
-  return [...competitors]
-    .filter((c) => c.prices[fuelType] !== undefined)
-    .sort((a, b) => {
-      const priceA = a.prices[fuelType] || 0;
-      const priceB = b.prices[fuelType] || 0;
-      return ascending ? priceA - priceB : priceB - priceA;
-    });
-};
-
-/**
- * Get nearby cheapest competitors within a radius
- */
-export const getNearbyCheapest = (
-  competitors: CompetitorPrice[],
-  fuelType: FuelType,
-  maxDistance: number,
-  limit: number = 5,
-): CompetitorPrice[] => {
-  return competitors
-    .filter(
-      (c) =>
-        c.distance !== undefined &&
-        c.distance <= maxDistance &&
-        c.prices[fuelType] !== undefined,
-    )
-    .sort((a, b) => (a.prices[fuelType] || 0) - (b.prices[fuelType] || 0))
-    .slice(0, limit);
-};
-
-/**
- * Calculate price trends over time
+ * Calculate price trend based on current and previous prices
  */
 export const calculatePriceTrend = (
   currentPrice: number,
-  previousPrice?: number,
-): "up" | "down" | "stable" | "unknown" => {
-  if (!previousPrice) return "unknown";
+  previousPrice: number,
+  thresholds: CompetitivenessThresholds = DEFAULT_THRESHOLDS
+): PriceTrendResult => {
+  if (currentPrice <= 0 || previousPrice <= 0) {
+    return {
+      direction: 'stable',
+      change: 0,
+      changePercentage: 0,
+      isSignificant: false,
+    };
+  }
 
-  const difference = currentPrice - previousPrice;
-  const threshold = 0.01; // 1 cent threshold for stability
+  const change = currentPrice - previousPrice;
+  const changePercentage = (change / previousPrice) * 100;
 
-  if (Math.abs(difference) < threshold) return "stable";
-  return difference > 0 ? "up" : "down";
+  let direction: TrendDirection = 'stable';
+  if (Math.abs(changePercentage) >= thresholds.significantChange) {
+    direction = changePercentage > 0 ? 'up' : 'down';
+  }
+
+  return {
+    direction,
+    change,
+    changePercentage,
+    isSignificant: Math.abs(changePercentage) >= thresholds.significantChange,
+  };
 };
 
 /**
- * Get price competitiveness color
+ * Calculate market position for a price among competitors
  */
-export const getPriceColor = (
-  competitiveness: "competitive" | "average" | "expensive",
+export const calculateMarketPosition = (
+  price: number,
+  competitorPrices: number[]
+): MarketPosition => {
+  if (price <= 0 || competitorPrices.length === 0) {
+    return {
+      rank: 1,
+      percentile: 50,
+      totalStations: 1,
+      betterThan: 0,
+      worseThan: 0,
+    };
+  }
+
+  const allPrices = [...competitorPrices, price].filter(p => p > 0).sort((a, b) => a - b);
+  const totalStations = allPrices.length;
+  const rank = allPrices.indexOf(price) + 1; // 1-based ranking
+  
+  const betterThan = rank - 1; // Number of stations with higher prices
+  const worseThan = totalStations - rank; // Number of stations with lower prices
+  const percentile = Math.round(((totalStations - rank) / (totalStations - 1)) * 100);
+
+  return {
+    rank,
+    percentile: totalStations > 1 ? percentile : 50,
+    totalStations,
+    betterThan,
+    worseThan,
+  };
+};
+
+/**
+ * Calculate comprehensive price ranking statistics
+ */
+export const calculatePriceRanking = (
+  prices: Array<{ price: number; stationId: string }>
+): PriceRanking => {
+  const validPrices = prices.filter(p => p.price > 0);
+  
+  if (validPrices.length === 0) {
+    return {
+      cheapest: { price: 0, stationId: '' },
+      mostExpensive: { price: 0, stationId: '' },
+      median: 0,
+      average: 0,
+      standardDeviation: 0,
+      priceRange: 0,
+    };
+  }
+
+  const sortedPrices = [...validPrices].sort((a, b) => a.price - b.price);
+  const priceValues = sortedPrices.map(p => p.price);
+  
+  const cheapest = sortedPrices[0];
+  const mostExpensive = sortedPrices[sortedPrices.length - 1];
+  const average = priceValues.reduce((sum, price) => sum + price, 0) / priceValues.length;
+  
+  // Calculate median
+  const midIndex = Math.floor(priceValues.length / 2);
+  const median = priceValues.length % 2 === 0
+    ? (priceValues[midIndex - 1] + priceValues[midIndex]) / 2
+    : priceValues[midIndex];
+
+  // Calculate standard deviation
+  const variance = priceValues.reduce((sum, price) => {
+    return sum + Math.pow(price - average, 2);
+  }, 0) / priceValues.length;
+  const standardDeviation = Math.sqrt(variance);
+
+  const priceRange = mostExpensive.price - cheapest.price;
+
+  return {
+    cheapest,
+    mostExpensive,
+    median,
+    average,
+    standardDeviation,
+    priceRange,
+  };
+};
+
+/**
+ * Get color class for price competitiveness level
+ */
+export const getCompetitivenessColor = (level: CompetitivenessLevel): string => {
+  const colorMap = {
+    competitive: 'text-green-600 dark:text-green-400',
+    average: 'text-yellow-600 dark:text-yellow-400',
+    expensive: 'text-red-600 dark:text-red-400',
+  };
+  return colorMap[level];
+};
+
+/**
+ * Get background color class for price competitiveness level
+ */
+export const getCompetitivenessBgColor = (level: CompetitivenessLevel): string => {
+  const colorMap = {
+    competitive: 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800',
+    average: 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800',
+    expensive: 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800',
+  };
+  return colorMap[level];
+};
+
+/**
+ * Get trend icon name for UI components
+ */
+export const getTrendIcon = (direction: TrendDirection): string => {
+  const iconMap = {
+    up: 'TrendingUp',
+    down: 'TrendingDown',
+    stable: 'Minus',
+  };
+  return iconMap[direction];
+};
+
+/**
+ * Format price difference for display
+ */
+export const formatPriceDifference = (
+  difference: number,
+  percentage: number,
+  currency: string = 'MXN'
 ): string => {
-  switch (competitiveness) {
-    case "competitive":
-      return "#10b981"; // green
-    case "expensive":
-      return "#ef4444"; // red
+  const sign = difference >= 0 ? '+' : '';
+  const formattedPrice = new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Math.abs(difference));
+  
+  return `${sign}${difference >= 0 ? formattedPrice : '-' + formattedPrice} (${sign}${percentage.toFixed(1)}%)`;
+};
+
+/**
+ * Get competitiveness description in Spanish
+ */
+export const getCompetitivenessDescription = (
+  result: PriceCompetitivenessResult
+): string => {
+  const { level, percentageDifference } = result;
+  const absPercentage = Math.abs(percentageDifference);
+  
+  switch (level) {
+    case 'competitive':
+      return `${absPercentage.toFixed(1)}% más barato que el promedio`;
+    case 'expensive':
+      return `${absPercentage.toFixed(1)}% más caro que el promedio`;
+    case 'average':
     default:
-      return "#f59e0b"; // yellow
+      return 'Precio similar al promedio del mercado';
   }
 };
 
 /**
- * Format price comparison message
+ * Calculate multiple fuel types competitiveness for a station
  */
-export const formatComparisonMessage = (
-  result: PriceComparisonResult,
-): string => {
-  const { ranking, totalCompetitors, percentageDifference, competitiveness } =
-    result;
+export const calculateStationCompetitiveness = (
+  stationPrices: Partial<Record<FuelType, number>>,
+  marketAverages: Partial<Record<FuelType, number>>,
+  thresholds: CompetitivenessThresholds = DEFAULT_THRESHOLDS
+): Record<FuelType, PriceCompetitivenessResult | null> => {
+  const fuelTypes: FuelType[] = ['regular', 'premium', 'diesel'];
+  const results: Partial<Record<FuelType, PriceCompetitivenessResult | null>> = {};
 
-  let message = `Ranking: ${ranking} de ${totalCompetitors + 1} estaciones. `;
+  fuelTypes.forEach(fuelType => {
+    const price = stationPrices[fuelType];
+    const average = marketAverages[fuelType];
+    
+    if (price && average) {
+      results[fuelType] = calculatePriceCompetitiveness(price, average, thresholds);
+    } else {
+      results[fuelType] = null;
+    }
+  });
 
-  if (competitiveness === "competitive") {
-    message += `Precio competitivo (${Math.abs(percentageDifference).toFixed(1)}% por debajo del promedio).`;
-  } else if (competitiveness === "expensive") {
-    message += `Precio alto (${percentageDifference.toFixed(1)}% por encima del promedio).`;
-  } else {
-    message += `Precio promedio del mercado.`;
-  }
-
-  return message;
+  return results as Record<FuelType, PriceCompetitivenessResult | null>;
 };
 
 /**
- * Identify price outliers (stations with unusually high or low prices)
+ * Get overall station competitiveness based on primary fuel type (usually regular)
  */
-export const identifyPriceOutliers = (
-  prices: number[],
-  threshold: number = 1.5, // IQR multiplier
-): { outliers: number[]; normal: number[] } => {
-  if (prices.length < 4) {
-    return { outliers: [], normal: prices };
+export const getOverallStationCompetitiveness = (
+  stationPrices: Partial<Record<FuelType, number>>,
+  marketAverages: Partial<Record<FuelType, number>>,
+  primaryFuelType: FuelType = 'regular',
+  thresholds: CompetitivenessThresholds = DEFAULT_THRESHOLDS
+): CompetitivenessLevel => {
+  // Try primary fuel type first
+  if (stationPrices[primaryFuelType] && marketAverages[primaryFuelType]) {
+    const result = calculatePriceCompetitiveness(
+      stationPrices[primaryFuelType]!,
+      marketAverages[primaryFuelType]!,
+      thresholds
+    );
+    return result.level;
   }
 
-  const sorted = [...prices].sort((a, b) => a - b);
-  const q1Index = Math.floor(sorted.length * 0.25);
-  const q3Index = Math.floor(sorted.length * 0.75);
+  // Fallback to any available fuel type
+  const fuelTypes: FuelType[] = ['regular', 'premium', 'diesel'];
+  for (const fuelType of fuelTypes) {
+    if (stationPrices[fuelType] && marketAverages[fuelType]) {
+      const result = calculatePriceCompetitiveness(
+        stationPrices[fuelType]!,
+        marketAverages[fuelType]!,
+        thresholds
+      );
+      return result.level;
+    }
+  }
 
-  const q1 = sorted[q1Index];
-  const q3 = sorted[q3Index];
-  const iqr = q3 - q1;
-
-  const lowerBound = q1 - threshold * iqr;
-  const upperBound = q3 + threshold * iqr;
-
-  const outliers = prices.filter((p) => p < lowerBound || p > upperBound);
-  const normal = prices.filter((p) => p >= lowerBound && p <= upperBound);
-
-  return { outliers, normal };
+  return 'average';
 };
 
-/**
- * Check if price data is stale
- */
-export const isPriceStale = (
-  lastUpdated: string | Date,
-  thresholdMinutes: number = 360, // 6 hours default
-): boolean => {
-  const lastUpdateTime = new Date(lastUpdated).getTime();
-  const currentTime = new Date().getTime();
-  const differenceInMinutes = (currentTime - lastUpdateTime) / (1000 * 60);
-
-  return differenceInMinutes > thresholdMinutes;
+export default {
+  calculatePriceCompetitiveness,
+  calculatePriceTrend,
+  calculateMarketPosition,
+  calculatePriceRanking,
+  calculateStationCompetitiveness,
+  getOverallStationCompetitiveness,
+  getCompetitivenessColor,
+  getCompetitivenessBgColor,
+  getTrendIcon,
+  formatPriceDifference,
+  getCompetitivenessDescription,
+  DEFAULT_THRESHOLDS,
 };
