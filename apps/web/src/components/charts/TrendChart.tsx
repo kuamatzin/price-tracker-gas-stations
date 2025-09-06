@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect, memo } from 'react';
 import {
   LineChart,
   Line,
@@ -117,7 +117,7 @@ const EnhancedTooltip = ({ active, payload, label }: TooltipProps & { previousDa
   );
 };
 
-export function TrendChart({ 
+const TrendChartComponent = memo(function TrendChart({ 
   data, 
   loading = false, 
   error = null,
@@ -512,4 +512,6 @@ export function TrendChart({
       </ChartContainer>
     </div>
   );
-}
+});
+
+export const TrendChart = TrendChartComponent;

@@ -13,6 +13,9 @@ import {
   type SeasonalPattern,
   type MissingDataInfo
 } from '../utils/trendCalculations';
+import { decimateChartData, decimateComparisonData, calculateOptimalThreshold, type DecimationOptions } from '../utils/dataOptimization';
+import { chartCache, useChartCache } from '../utils/chartCache';
+import { globalRequestDebouncer } from '../hooks/useDebounce';
 
 interface DateRange {
   start: Date;
@@ -55,6 +58,10 @@ interface AnalyticsState {
   dataCache: DataCache;
   cacheExpiry: number; // in milliseconds
   
+  // Performance optimizations
+  decimationOptions: DecimationOptions;
+  isOptimizedMode: boolean;
+  
   // Loading and error states
   isLoading: boolean;
   error: string | null;
@@ -86,6 +93,12 @@ interface AnalyticsState {
   calculateDataQuality: () => void;
   performAllCalculations: () => void;
   
+  // Performance management
+  setOptimizedMode: (enabled: boolean) => void;
+  setDecimationOptions: (options: DecimationOptions) => void;
+  getOptimizedData: (data: ChartDataPoint[]) => ChartDataPoint[];
+  getOptimizedComparisonData: (data: ComparisonDataPoint[]) => ComparisonDataPoint[];
+  
   // State management
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -94,6 +107,12 @@ interface AnalyticsState {
 
 const ALL_FUEL_TYPES: FuelType[] = ['regular', 'premium', 'diesel'];
 const CACHE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+
+const DEFAULT_DECIMATION_OPTIONS: DecimationOptions = {
+  threshold: 1000,
+  method: 'lttb',
+  preserveExtremes: true
+};
 const DEFAULT_DATE_RANGE: DateRange = {
   start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
   end: new Date()
@@ -189,6 +208,11 @@ export const useAnalyticsStore = create<AnalyticsState>()(
       selectedFuels: ALL_FUEL_TYPES,
       dataCache: {},
       cacheExpiry: CACHE_EXPIRY_MS,
+      
+      // Performance optimizations
+      decimationOptions: DEFAULT_DECIMATION_OPTIONS,
+      isOptimizedMode: true,
+      
       isLoading: false,
       error: null,
       
@@ -235,6 +259,63 @@ export const useAnalyticsStore = create<AnalyticsState>()(
       selectAllFuels: () => set({ selectedFuels: ALL_FUEL_TYPES }),
       deselectAllFuels: () => set({ selectedFuels: [] }),
       
+      // Performance management
+      setOptimizedMode: (enabled) => {
+        set({ isOptimizedMode: enabled });
+        
+        // Auto-adjust decimation threshold based on screen width
+        if (enabled && typeof window !== 'undefined') {
+          const threshold = calculateOptimalThreshold(window.innerWidth);
+          set(state => ({
+            decimationOptions: { ...state.decimationOptions, threshold }
+          }));
+        }
+      },
+      
+      setDecimationOptions: (options) => set({ decimationOptions: options }),
+      
+      getOptimizedData: (data) => {
+        const { isOptimizedMode, decimationOptions } = get();
+        
+        if (!isOptimizedMode || data.length <= decimationOptions.threshold) {
+          return data;
+        }
+        
+        // Use caching for decimated data
+        const cacheKey = `decimated:${data.length}:${JSON.stringify(decimationOptions)}`;
+        const cached = chartCache.getProcessedData({ cacheKey });
+        
+        if (cached) {
+          return cached;
+        }
+        
+        const decimatedData = decimateChartData(data, decimationOptions);
+        chartCache.cacheProcessedData({ cacheKey }, decimatedData);
+        
+        return decimatedData;
+      },
+      
+      getOptimizedComparisonData: (data) => {
+        const { isOptimizedMode, decimationOptions } = get();
+        
+        if (!isOptimizedMode || data.length <= decimationOptions.threshold) {
+          return data;
+        }
+        
+        // Use caching for decimated comparison data
+        const cacheKey = `decimated-comparison:${data.length}:${JSON.stringify(decimationOptions)}`;
+        const cached = chartCache.getProcessedData({ cacheKey });
+        
+        if (cached) {
+          return cached as ComparisonDataPoint[];
+        }
+        
+        const decimatedData = decimateComparisonData(data, decimationOptions);
+        chartCache.cacheProcessedData({ cacheKey }, decimatedData as any);
+        
+        return decimatedData;
+      },
+
       // Cache management
       getCachedData: (range) => {
         const { dataCache } = get();
@@ -276,37 +357,43 @@ export const useAnalyticsStore = create<AnalyticsState>()(
           return cachedData;
         }
         
+        // Use debounced request to prevent rapid API calls
+        const cacheKey = `fetchDataForRange:${generateCacheKey(range)}`;
+        
         try {
-          state.setLoading(true);
-          state.setError(null);
-          
-          // Use real analytics service for data fetching
-          // For now, use a default station ID - this should come from user context
-          const stationId = 'default-station'; // TODO: Get from user context/auth
-          
-          const params: StationHistoryParams = {
-            stationId,
+          const data = await globalRequestDebouncer.debounce(cacheKey, async (signal) => {
+            state.setLoading(true);
+            state.setError(null);
+            
+            // Use real analytics service for data fetching
+            // For now, use a default station ID - this should come from user context
+            const stationId = 'default-station'; // TODO: Get from user context/auth
+            
+            const params: StationHistoryParams = {
+              stationId,
             startDate: range.start.toISOString().split('T')[0],
             endDate: range.end.toISOString().split('T')[0]
           };
           
-          let data: ChartDataPoint[];
-          
-          try {
-            // Try to fetch from API first
-            data = await analyticsService.getStationHistory(params);
-          } catch (apiError) {
-            console.warn('API call failed, falling back to mock data:', apiError);
-            // Fallback to mock data if API fails
-            data = generateMockDataForRange(range);
-          }
-          
-          // Cache the data
-          state.setCachedData(range, data);
-          
-          // Update store with new data
-          state.setHistoricalData(data);
-          
+            let data: ChartDataPoint[];
+            
+            try {
+              // Try to fetch from API first
+              data = await analyticsService.getStationHistory(params);
+            } catch (apiError) {
+              console.warn('API call failed, falling back to mock data:', apiError);
+              // Fallback to mock data if API fails
+              data = generateMockDataForRange(range);
+            }
+            
+            // Cache the data
+            state.setCachedData(range, data);
+            
+            // Update store with new data
+            state.setHistoricalData(data);
+            
+            return data;
+          }, 300); // 300ms debounce
           return data;
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to fetch data';

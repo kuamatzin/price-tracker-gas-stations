@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import { useMemo, useState, useCallback, useRef, useEffect, memo } from 'react';
 import {
   Line,
   XAxis,
@@ -220,7 +220,7 @@ const MarketPositionIndicator = ({
   );
 };
 
-export function ComparisonChart({
+const ComparisonChartComponent = memo(function ComparisonChart({
   data,
   loading = false,
   error = null,
@@ -671,4 +671,6 @@ export function ComparisonChart({
       )}
     </div>
   );
-}
+});
+
+export const ComparisonChart = ComparisonChartComponent;

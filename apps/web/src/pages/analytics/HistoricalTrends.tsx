@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { RefreshCw, Download } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
-import { TrendChart } from '../../components/charts/TrendChart';
-import { ComparisonChart } from '../../components/charts/ComparisonChart';
+import { LazyChart, ProgressiveChart, useChartPreloader } from '../../components/charts/LazyChart';
 import { DateRangeSelector } from '../../components/features/analytics/DateRangeSelector';
 import { FuelTypeToggle } from '../../components/features/analytics/FuelTypeToggle';
 import { StatisticsPanel } from '../../components/features/analytics/StatisticsPanel';
@@ -35,6 +34,9 @@ const generateMockData = (days: number): ChartDataPoint[] => {
 type ChartType = 'trends' | 'comparison';
 
 export default function HistoricalTrends() {
+  // Preload chart components for better UX
+  useChartPreloader();
+  
   const {
     historicalData,
     comparisonData: storeComparisonData,
@@ -48,7 +50,11 @@ export default function HistoricalTrends() {
     selectAllFuels,
     deselectAllFuels,
     setDateRange,
-    getFilteredData
+    getFilteredData,
+    getOptimizedData,
+    getOptimizedComparisonData,
+    isOptimizedMode,
+    setOptimizedMode
   } = useAnalyticsStore();
   const [chartType, setChartType] = useState<ChartType>('trends');
   const [comparisonFuel, setComparisonFuel] = useState<FuelType>('regular');
@@ -195,6 +201,26 @@ export default function HistoricalTrends() {
         </div>
       </Card>
 
+      {/* Performance Toggle */}
+      <Card className="p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <label className="text-sm font-medium">Modo Optimizado</label>
+            <input
+              type="checkbox"
+              checked={isOptimizedMode}
+              onChange={(e) => setOptimizedMode(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            {isOptimizedMode && (
+              <span className="text-xs text-green-600">
+                Datos optimizados para mejor rendimiento
+              </span>
+            )}
+          </div>
+        </div>
+      </Card>
+
       {/* Chart */}
       <Card className="p-4">
         {error && (
@@ -203,19 +229,27 @@ export default function HistoricalTrends() {
           </div>
         )}
         {chartType === 'trends' ? (
-          <TrendChart
-            data={historicalData}
-            loading={isLoading}
-            selectedFuels={selectedFuels}
-            showZoomControls={true}
+          <ProgressiveChart
+            chartType="trend"
+            priority="high"
+            chartProps={{
+              data: getOptimizedData(historicalData),
+              loading: isLoading,
+              selectedFuels: selectedFuels,
+              showZoomControls: true
+            }}
           />
         ) : (
-          <ComparisonChart
-            data={storeComparisonData}
-            loading={isLoading}
-            selectedFuel={comparisonFuel}
-            showPercentageDifference={true}
-            showMarketPositionIndicators={true}
+          <LazyChart
+            chartType="comparison"
+            threshold={100}
+            chartProps={{
+              data: getOptimizedComparisonData(storeComparisonData),
+              loading: isLoading,
+              selectedFuel: comparisonFuel,
+              showPercentageDifference: true,
+              showMarketPositionIndicators: true
+            }}
           />
         )}
       </Card>
@@ -223,7 +257,7 @@ export default function HistoricalTrends() {
       {/* Statistics - Only show for trends view */}
       {chartType === 'trends' && (
         <StatisticsPanel
-          data={historicalData}
+          data={getOptimizedData(historicalData)}
           selectedFuels={selectedFuels}
           loading={isLoading}
           variant="cards"
