@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import type { ChartDataPoint, FuelType } from '../types/chart';
+import type { ChartDataPoint, FuelType, ComparisonDataPoint } from '../types/charts';
+import { analyticsService, type StationHistoryParams, type MarketTrendsParams } from '../services/api/analytics.service';
 
 interface DateRange {
   start: Date;
@@ -26,6 +27,7 @@ interface AggregatedData {
 interface AnalyticsState {
   // Historical price data
   historicalData: ChartDataPoint[];
+  comparisonData: ComparisonDataPoint[];
   aggregatedData: AggregatedData;
   
   // Selected filters
@@ -42,6 +44,7 @@ interface AnalyticsState {
   
   // Actions
   setHistoricalData: (data: ChartDataPoint[]) => void;
+  setComparisonData: (data: ComparisonDataPoint[]) => void;
   setDateRange: (range: DateRange) => void;
   setSelectedFuels: (fuels: FuelType[]) => void;
   toggleFuel: (fuel: FuelType) => void;
@@ -50,6 +53,7 @@ interface AnalyticsState {
   
   // Data fetching and caching
   fetchDataForRange: (range: DateRange) => Promise<ChartDataPoint[]>;
+  fetchComparisonDataForRange: (range: DateRange) => Promise<ComparisonDataPoint[]>;
   getCachedData: (range: DateRange) => ChartDataPoint[] | null;
   setCachedData: (range: DateRange, data: ChartDataPoint[]) => void;
   clearCache: () => void;
@@ -144,6 +148,7 @@ export const useAnalyticsStore = create<AnalyticsState>()(
     (set, get) => ({
       // Initial state
       historicalData: [],
+      comparisonData: [],
       aggregatedData: {
         daily: [],
         weekly: [],
@@ -167,6 +172,8 @@ export const useAnalyticsStore = create<AnalyticsState>()(
           aggregatedData: { daily, weekly, monthly }
         });
       },
+      
+      setComparisonData: (data) => set({ comparisonData: data }),
       
       // Filter setters
       setDateRange: (range) => set({ selectedDateRange: range }),
@@ -228,11 +235,26 @@ export const useAnalyticsStore = create<AnalyticsState>()(
           state.setLoading(true);
           state.setError(null);
           
-          // Simulate API call delay
-          await new Promise(resolve => setTimeout(resolve, 800));
+          // Use real analytics service for data fetching
+          // For now, use a default station ID - this should come from user context
+          const stationId = 'default-station'; // TODO: Get from user context/auth
           
-          // Generate mock data for the range
-          const data = generateMockDataForRange(range);
+          const params: StationHistoryParams = {
+            stationId,
+            startDate: range.start.toISOString().split('T')[0],
+            endDate: range.end.toISOString().split('T')[0]
+          };
+          
+          let data: ChartDataPoint[];
+          
+          try {
+            // Try to fetch from API first
+            data = await analyticsService.getStationHistory(params);
+          } catch (apiError) {
+            console.warn('API call failed, falling back to mock data:', apiError);
+            // Fallback to mock data if API fails
+            data = generateMockDataForRange(range);
+          }
           
           // Cache the data
           state.setCachedData(range, data);
@@ -243,6 +265,53 @@ export const useAnalyticsStore = create<AnalyticsState>()(
           return data;
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to fetch data';
+          state.setError(errorMessage);
+          throw error;
+        } finally {
+          state.setLoading(false);
+        }
+      },
+      
+      // Fetch comparison data for market trends
+      fetchComparisonDataForRange: async (range) => {
+        const state = get();
+        
+        try {
+          state.setLoading(true);
+          state.setError(null);
+          
+          // Use real analytics service for market trends
+          const params: MarketTrendsParams = {
+            startDate: range.start.toISOString().split('T')[0],
+            endDate: range.end.toISOString().split('T')[0],
+            grouping: 'daily'
+          };
+          
+          let data: ComparisonDataPoint[];
+          
+          try {
+            // Try to fetch from API first
+            data = await analyticsService.getMarketTrends(params);
+          } catch (apiError) {
+            console.warn('API call for market trends failed, falling back to mock data:', apiError);
+            // Fallback to mock data based on historical data
+            const historicalData = state.historicalData;
+            data = historicalData.map(point => ({
+              ...point,
+              marketAverage: {
+                regular: point.regular ? point.regular * (0.95 + Math.random() * 0.1) : undefined,
+                premium: point.premium ? point.premium * (0.95 + Math.random() * 0.1) : undefined,
+                diesel: point.diesel ? point.diesel * (0.95 + Math.random() * 0.1) : undefined,
+              }
+            }));
+          }
+          
+          // Update store with new comparison data
+          state.setComparisonData(data);
+          
+          return data;
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Failed to fetch comparison data';
           state.setError(errorMessage);
           throw error;
         } finally {

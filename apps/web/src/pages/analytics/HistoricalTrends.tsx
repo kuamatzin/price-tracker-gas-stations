@@ -32,59 +32,24 @@ const generateMockData = (days: number): ChartDataPoint[] => {
   return data;
 };
 
-// Generate comparison data with market averages
-const generateComparisonData = (days: number): ComparisonDataPoint[] => {
-  const data: ComparisonDataPoint[] = [];
-  const now = new Date();
-  
-  for (let i = days; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
-    
-    // User prices (simulated with some variation)
-    const basePrice = 20 + Math.random() * 5;
-    const userRegular = basePrice + Math.random() * 2 - 1;
-    const userPremium = basePrice + 2 + Math.random() * 2 - 1;
-    const userDiesel = basePrice - 1 + Math.random() * 2 - 1;
-    
-    // Market averages (typically slightly different from user prices)
-    const marketVariation = (Math.random() - 0.5) * 3; // -1.5 to +1.5 variation
-    
-    data.push({
-      date: date.toISOString(),
-      regular: userRegular,
-      premium: userPremium,
-      diesel: userDiesel,
-      marketAverage: {
-        regular: userRegular + marketVariation * 0.8,
-        premium: userPremium + marketVariation,
-        diesel: userDiesel + marketVariation * 0.9,
-      }
-    });
-  }
-  
-  return data;
-};
-
-
 type ChartType = 'trends' | 'comparison';
 
 export default function HistoricalTrends() {
   const {
     historicalData,
+    comparisonData: storeComparisonData,
     selectedFuels,
     selectedDateRange,
     isLoading,
     error,
     fetchDataForRange,
+    fetchComparisonDataForRange,
     toggleFuel,
     selectAllFuels,
     deselectAllFuels,
     setDateRange,
     getFilteredData
   } = useAnalyticsStore();
-  
-  const [comparisonData, setComparisonData] = useState<ComparisonDataPoint[]>([]);
   const [chartType, setChartType] = useState<ChartType>('trends');
   const [comparisonFuel, setComparisonFuel] = useState<FuelType>('regular');
 
@@ -94,26 +59,26 @@ export default function HistoricalTrends() {
       try {
         await fetchDataForRange(selectedDateRange);
         
-        // Generate comparison data based on historical data
-        const daysDiff = Math.ceil((selectedDateRange.end.getTime() - selectedDateRange.start.getTime()) / (1000 * 60 * 60 * 24));
-        const compData = generateComparisonData(daysDiff);
-        setComparisonData(compData);
+        // If comparison chart is active, also fetch market comparison data
+        if (chartType === 'comparison') {
+          await fetchComparisonDataForRange(selectedDateRange);
+        }
       } catch (err) {
         console.error('Failed to load data:', err);
       }
     };
 
     loadData();
-  }, [selectedDateRange, fetchDataForRange]);
+  }, [selectedDateRange, chartType, fetchDataForRange, fetchComparisonDataForRange]);
 
   const handleRefresh = async () => {
     try {
       await fetchDataForRange(selectedDateRange);
       
-      // Refresh comparison data too
-      const daysDiff = Math.ceil((selectedDateRange.end.getTime() - selectedDateRange.start.getTime()) / (1000 * 60 * 60 * 24));
-      const compData = generateComparisonData(daysDiff);
-      setComparisonData(compData);
+      // Refresh comparison data if in comparison mode
+      if (chartType === 'comparison') {
+        await fetchComparisonDataForRange(selectedDateRange);
+      }
     } catch (err) {
       console.error('Failed to refresh data:', err);
     }
@@ -246,7 +211,7 @@ export default function HistoricalTrends() {
           />
         ) : (
           <ComparisonChart
-            data={comparisonData}
+            data={storeComparisonData}
             loading={isLoading}
             selectedFuel={comparisonFuel}
             showPercentageDifference={true}
