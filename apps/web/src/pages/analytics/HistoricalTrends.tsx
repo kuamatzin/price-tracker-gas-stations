@@ -1,0 +1,268 @@
+import { useState, useEffect } from 'react';
+import { RefreshCw, Download } from 'lucide-react';
+import { Button } from '../../components/ui/button';
+import { Card } from '../../components/ui/card';
+import { LazyChart, ProgressiveChart, useChartPreloader } from '../../components/charts/LazyChart';
+import { DateRangeSelector } from '../../components/features/analytics/DateRangeSelector';
+import { FuelTypeToggle } from '../../components/features/analytics/FuelTypeToggle';
+import { StatisticsPanel } from '../../components/features/analytics/StatisticsPanel';
+import { useAnalyticsStore } from '../../stores/analyticsStore';
+import type { ChartDataPoint, ComparisonDataPoint, FuelType } from '../../types/charts';
+
+// Mock data for demonstration - in a real app this would come from API
+const generateMockData = (days: number): ChartDataPoint[] => {
+  const data: ChartDataPoint[] = [];
+  const now = new Date();
+  
+  for (let i = days; i >= 0; i--) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - i);
+    
+    const basePrice = 20 + Math.random() * 5;
+    
+    data.push({
+      date: date.toISOString(),
+      regular: basePrice + Math.random() * 2 - 1,
+      premium: basePrice + 2 + Math.random() * 2 - 1,
+      diesel: basePrice - 1 + Math.random() * 2 - 1,
+    });
+  }
+  
+  return data;
+};
+
+type ChartType = 'trends' | 'comparison';
+
+export default function HistoricalTrends() {
+  // Preload chart components for better UX
+  useChartPreloader();
+  
+  const {
+    historicalData,
+    comparisonData: storeComparisonData,
+    selectedFuels,
+    selectedDateRange,
+    isLoading,
+    error,
+    fetchDataForRange,
+    fetchComparisonDataForRange,
+    toggleFuel,
+    selectAllFuels,
+    deselectAllFuels,
+    setDateRange,
+    getFilteredData,
+    getOptimizedData,
+    getOptimizedComparisonData,
+    isOptimizedMode,
+    setOptimizedMode
+  } = useAnalyticsStore();
+  const [chartType, setChartType] = useState<ChartType>('trends');
+  const [comparisonFuel, setComparisonFuel] = useState<FuelType>('regular');
+
+  // Load data based on date range
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        await fetchDataForRange(selectedDateRange);
+        
+        // If comparison chart is active, also fetch market comparison data
+        if (chartType === 'comparison') {
+          await fetchComparisonDataForRange(selectedDateRange);
+        }
+      } catch (err) {
+        console.error('Failed to load data:', err);
+      }
+    };
+
+    loadData();
+  }, [selectedDateRange, chartType, fetchDataForRange, fetchComparisonDataForRange]);
+
+  const handleRefresh = async () => {
+    try {
+      await fetchDataForRange(selectedDateRange);
+      
+      // Refresh comparison data if in comparison mode
+      if (chartType === 'comparison') {
+        await fetchComparisonDataForRange(selectedDateRange);
+      }
+    } catch (err) {
+      console.error('Failed to refresh data:', err);
+    }
+  };
+
+  const handleExport = () => {
+    const filteredData = getFilteredData();
+    const csvContent = [
+      ['Fecha', 'Magna', 'Premium', 'Diesel'],
+      ...filteredData.map(item => [
+        new Date(item.date).toLocaleDateString('es-MX'),
+        item.regular?.toFixed(2) || '',
+        item.premium?.toFixed(2) || '',
+        item.diesel?.toFixed(2) || '',
+      ])
+    ].map(row => row.join(',')).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'tendencias-historicas.csv';
+    link.click();
+  };
+
+  // Fuel toggle functions are now handled by the store
+
+
+  return (
+    <div className="space-y-6 p-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Tendencias Históricas
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Analiza la evolución de precios en el tiempo
+          </p>
+        </div>
+        
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Actualizar
+          </Button>
+          
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={!historicalData.length}>
+            <Download className="w-4 h-4 mr-2" />
+            Exportar CSV
+          </Button>
+        </div>
+      </div>
+
+      {/* Controls */}
+      <Card className="p-4">
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+              Tipo de gráfico
+            </h3>
+            <div className="flex gap-2">
+              <Button
+                variant={chartType === 'trends' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setChartType('trends')}
+              >
+                Tendencias
+              </Button>
+              <Button
+                variant={chartType === 'comparison' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setChartType('comparison')}
+              >
+                Comparación vs Mercado
+              </Button>
+            </div>
+          </div>
+          
+          <div>
+            <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+              Rango de fechas
+            </h3>
+            <DateRangeSelector />
+          </div>
+          
+          {chartType === 'trends' ? (
+            <FuelTypeToggle
+              selectedFuels={selectedFuels}
+              onFuelToggle={toggleFuel}
+              onSelectAll={selectAllFuels}
+              onDeselectAll={deselectAllFuels}
+              variant="tabs"
+              showSelectAll={true}
+            />
+          ) : (
+            <div>
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+                Combustible para comparar
+              </h3>
+              <div className="flex gap-2">
+                {(['regular', 'premium', 'diesel'] as FuelType[]).map((fuel) => (
+                  <Button
+                    key={fuel}
+                    variant={comparisonFuel === fuel ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setComparisonFuel(fuel)}
+                  >
+                    {fuel === 'regular' ? 'Magna' : fuel === 'premium' ? 'Premium' : 'Diésel'}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* Performance Toggle */}
+      <Card className="p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <label className="text-sm font-medium">Modo Optimizado</label>
+            <input
+              type="checkbox"
+              checked={isOptimizedMode}
+              onChange={(e) => setOptimizedMode(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            {isOptimizedMode && (
+              <span className="text-xs text-green-600">
+                Datos optimizados para mejor rendimiento
+              </span>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      {/* Chart */}
+      <Card className="p-4">
+        {error && (
+          <div className="text-red-600 dark:text-red-400 p-4 text-center">
+            Error: {error}
+          </div>
+        )}
+        {chartType === 'trends' ? (
+          <ProgressiveChart
+            chartType="trend"
+            priority="high"
+            chartProps={{
+              data: getOptimizedData(historicalData),
+              loading: isLoading,
+              selectedFuels: selectedFuels,
+              showZoomControls: true
+            }}
+          />
+        ) : (
+          <LazyChart
+            chartType="comparison"
+            threshold={100}
+            chartProps={{
+              data: getOptimizedComparisonData(storeComparisonData),
+              loading: isLoading,
+              selectedFuel: comparisonFuel,
+              showPercentageDifference: true,
+              showMarketPositionIndicators: true
+            }}
+          />
+        )}
+      </Card>
+
+      {/* Statistics - Only show for trends view */}
+      {chartType === 'trends' && (
+        <StatisticsPanel
+          data={getOptimizedData(historicalData)}
+          selectedFuels={selectedFuels}
+          loading={isLoading}
+          variant="cards"
+        />
+      )}
+    </div>
+  );
+}

@@ -14,6 +14,7 @@ const Register = lazy(() => import('@/pages/auth/Register'));
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
 const Prices = lazy(() => import('@/pages/Prices'));
 const Analytics = lazy(() => import('@/pages/Analytics'));
+const HistoricalTrends = lazy(() => import('@/pages/analytics/HistoricalTrends'));
 const Settings = lazy(() => import('@/pages/Settings'));
 
 // Wrapper for lazy loaded components with loading state and transitions
@@ -113,13 +114,28 @@ export const router = createBrowserRouter([
       },
       {
         path: 'analytics',
-        element: (
-          <RoleBasedRoute allowedRoles={['premium', 'enterprise']}>
-            <LazyWrapper>
-              <Analytics />
-            </LazyWrapper>
-          </RoleBasedRoute>
-        ),
+        children: [
+          {
+            index: true,
+            element: (
+              <RoleBasedRoute allowedRoles={['premium', 'enterprise']}>
+                <LazyWrapper>
+                  <Analytics />
+                </LazyWrapper>
+              </RoleBasedRoute>
+            ),
+          },
+          {
+            path: 'trends',
+            element: (
+              <RoleBasedRoute allowedRoles={['premium', 'enterprise']}>
+                <LazyWrapper>
+                  <HistoricalTrends />
+                </LazyWrapper>
+              </RoleBasedRoute>
+            ),
+          },
+        ],
       },
       {
         path: 'settings',
