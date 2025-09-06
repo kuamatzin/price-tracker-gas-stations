@@ -2,6 +2,17 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { ChartDataPoint, FuelType, ComparisonDataPoint } from '../types/charts';
 import { analyticsService, type StationHistoryParams, type MarketTrendsParams } from '../services/api/analytics.service';
+import { 
+  performComprehensiveAnalysis,
+  analyzeMarketComparison,
+  detectSeasonalPatterns,
+  analyzeMissingData,
+  type TrendResult,
+  type VolatilityResult,
+  type MarketComparisonResult,
+  type SeasonalPattern,
+  type MissingDataInfo
+} from '../utils/trendCalculations';
 
 interface DateRange {
   start: Date;
@@ -29,6 +40,12 @@ interface AnalyticsState {
   historicalData: ChartDataPoint[];
   comparisonData: ComparisonDataPoint[];
   aggregatedData: AggregatedData;
+  
+  // Calculated analytics
+  trendAnalysis: { [key in FuelType]?: ReturnType<typeof performComprehensiveAnalysis> };
+  marketComparison: { [key in FuelType]?: MarketComparisonResult };
+  seasonalPatterns: { [key in FuelType]?: SeasonalPattern[] };
+  dataQuality: MissingDataInfo | null;
   
   // Selected filters
   selectedDateRange: DateRange;
@@ -61,6 +78,13 @@ interface AnalyticsState {
   // Data aggregation
   aggregateData: (data: ChartDataPoint[], period: 'daily' | 'weekly' | 'monthly') => ChartDataPoint[];
   getFilteredData: () => ChartDataPoint[];
+  
+  // Trend calculations
+  calculateTrendAnalysis: (fuelType?: FuelType) => void;
+  calculateMarketComparison: (fuelType?: FuelType) => void;
+  calculateSeasonalPatterns: (fuelType?: FuelType) => void;
+  calculateDataQuality: () => void;
+  performAllCalculations: () => void;
   
   // State management
   setLoading: (loading: boolean) => void;
@@ -154,6 +178,13 @@ export const useAnalyticsStore = create<AnalyticsState>()(
         weekly: [],
         monthly: []
       },
+      
+      // Calculated analytics
+      trendAnalysis: {},
+      marketComparison: {},
+      seasonalPatterns: {},
+      dataQuality: null,
+      
       selectedDateRange: DEFAULT_DATE_RANGE,
       selectedFuels: ALL_FUEL_TYPES,
       dataCache: {},
@@ -171,9 +202,23 @@ export const useAnalyticsStore = create<AnalyticsState>()(
           historicalData: data,
           aggregatedData: { daily, weekly, monthly }
         });
+        
+        // Automatically perform calculations when new data is loaded
+        const state = get();
+        setTimeout(() => {
+          state.performAllCalculations();
+        }, 0);
       },
       
-      setComparisonData: (data) => set({ comparisonData: data }),
+      setComparisonData: (data) => {
+        set({ comparisonData: data });
+        
+        // Automatically calculate market comparison when new comparison data is loaded
+        const state = get();
+        setTimeout(() => {
+          state.calculateMarketComparison();
+        }, 0);
+      },
       
       // Filter setters
       setDateRange: (range) => set({ selectedDateRange: range }),
@@ -339,13 +384,98 @@ export const useAnalyticsStore = create<AnalyticsState>()(
         });
       },
       
+      // Trend calculation methods
+      calculateTrendAnalysis: (fuelType) => {
+        const state = get();
+        const data = state.historicalData;
+        
+        if (!data.length) return;
+        
+        const fuelsToAnalyze = fuelType ? [fuelType] : ALL_FUEL_TYPES;
+        const newTrendAnalysis = { ...state.trendAnalysis };
+        
+        fuelsToAnalyze.forEach(fuel => {
+          newTrendAnalysis[fuel] = performComprehensiveAnalysis(
+            data, 
+            fuel, 
+            state.selectedDateRange
+          );
+        });
+        
+        set({ trendAnalysis: newTrendAnalysis });
+      },
+      
+      calculateMarketComparison: (fuelType) => {
+        const state = get();
+        const data = state.comparisonData;
+        
+        if (!data.length) return;
+        
+        const fuelsToAnalyze = fuelType ? [fuelType] : ALL_FUEL_TYPES;
+        const newMarketComparison = { ...state.marketComparison };
+        
+        fuelsToAnalyze.forEach(fuel => {
+          newMarketComparison[fuel] = analyzeMarketComparison(data, fuel);
+        });
+        
+        set({ marketComparison: newMarketComparison });
+      },
+      
+      calculateSeasonalPatterns: (fuelType) => {
+        const state = get();
+        const data = state.historicalData;
+        
+        if (!data.length) return;
+        
+        const fuelsToAnalyze = fuelType ? [fuelType] : ALL_FUEL_TYPES;
+        const newSeasonalPatterns = { ...state.seasonalPatterns };
+        
+        fuelsToAnalyze.forEach(fuel => {
+          newSeasonalPatterns[fuel] = detectSeasonalPatterns(data, fuel);
+        });
+        
+        set({ seasonalPatterns: newSeasonalPatterns });
+      },
+      
+      calculateDataQuality: () => {
+        const state = get();
+        const data = state.historicalData;
+        
+        if (!data.length) {
+          set({ dataQuality: null });
+          return;
+        }
+        
+        const dataQuality = analyzeMissingData(data, state.selectedDateRange);
+        set({ dataQuality });
+      },
+      
+      performAllCalculations: () => {
+        const state = get();
+        
+        // Perform all calculations for all fuel types
+        state.calculateTrendAnalysis();
+        state.calculateSeasonalPatterns();
+        state.calculateDataQuality();
+        
+        // Only calculate market comparison if we have comparison data
+        if (state.comparisonData.length) {
+          state.calculateMarketComparison();
+        }
+      },
+      
       // State management
       setLoading: (loading) => set({ isLoading: loading }),
       setError: (error) => set({ error }),
       
       resetState: () => set({
         historicalData: [],
+        comparisonData: [],
         aggregatedData: { daily: [], weekly: [], monthly: [] },
+        trendAnalysis: {},
+        marketComparison: {},
+        seasonalPatterns: {},
+        dataQuality: null,
         selectedDateRange: DEFAULT_DATE_RANGE,
         selectedFuels: ALL_FUEL_TYPES,
         dataCache: {},
